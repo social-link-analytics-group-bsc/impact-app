@@ -31,5 +31,6 @@ var/
 *.pot
 *.pyc
 __pycache__/
+
 backend/settings.py
 superuser.txt
