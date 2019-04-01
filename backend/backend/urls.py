@@ -16,14 +16,9 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
-from rest_framework_swagger.views import get_swagger_view
-
-
-schema_view = get_swagger_view(title='Impact App API')
 
 
 urlpatterns = [
-    path('', schema_view),
     path('sci_impact/', include('sci_impact.urls')),
     path('admin/', admin.site.urls),
 ]
