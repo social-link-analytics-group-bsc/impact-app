@@ -29,6 +29,9 @@ class Country(models.Model):
     def __unicode__(self):
         return f"{self.name}"
 
+    def __str__(self):
+        return self.name
+
 
 class Region(models.Model):
     name = models.CharField(max_length=100)
@@ -36,6 +39,9 @@ class Region(models.Model):
 
     def __unicode__(self):
         return f"{self.name}, {self.country.name}"
+
+    def __str__(self):
+        return f"{self.name}"
 
 
 class City(models.Model):
@@ -86,6 +92,9 @@ class Scientist(models.Model):
     i10_index = models.IntegerField(default=0)
 
     def __unicode__(self):
+        return f"{self.first_name} {self.last_name}"
+
+    def __str__(self):
         return f"{self.first_name} {self.last_name}"
 
 
@@ -150,6 +159,8 @@ class Patent(models.Model):
 
 class Institution(models.Model):
     name = models.CharField(max_length=100, default='')
+    country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.CASCADE)
+    region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.CASCADE)
     city = models.ForeignKey(City, null=True, blank=True, on_delete=models.CASCADE)
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
@@ -158,6 +169,9 @@ class Institution(models.Model):
 
     def __unicode__(self):
         return f"{self.name}"
+
+    def __str__(self):
+        return self.name
 
 
 class Affiliation(models.Model):
