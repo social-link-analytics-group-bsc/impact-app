@@ -25,5 +25,3 @@ yarn-error.log*
 *.njsproj
 *.sln
 *.s
-
-backend/superuser.txt
