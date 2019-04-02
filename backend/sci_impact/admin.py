@@ -33,7 +33,7 @@ class CityAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender')
+    list_display = ('last_name', 'first_name', 'gender', 'nationality')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
 
@@ -45,4 +45,4 @@ class InstitutionAdmin(admin.ModelAdmin):
 
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
-    list_display = ('scientist', 'institution', 'data_joined')
+    list_display = ('scientist', 'institution', 'date_joined')
