@@ -184,3 +184,9 @@ class Affiliation(models.Model):
     scientist = models.ForeignKey(Scientist, on_delete=models.CASCADE)
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE)
     data_joined = models.DateField(null=True, blank=True)
+
+    def __unicode__(self):
+        return f"{self.scientist.last_name}, {self.scientist.first_name} - {self.institution.name}"
+
+    def __str__(self):
+        return f"{self.scientist.last_name}, {self.scientist.first_name} - {self.institution.name}"

@@ -2,7 +2,7 @@ from django.http import HttpResponse, Http404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from sci_impact.models import Scientist
+from sci_impact.models import Scientist, Country
 from sci_impact.serializers import ScientistSerializer
 
 
@@ -16,8 +16,8 @@ class ScientistList(APIView):
         """
             List all scientists
         """
-        snippets = Scientist.objects.all()
-        serializer = ScientistSerializer(snippets, many=True)
+        scientists = Scientist.objects.all()
+        serializer = ScientistSerializer(scientists, many=True)
         return Response(serializer.data)
 
     def post(self, request, format=None):
