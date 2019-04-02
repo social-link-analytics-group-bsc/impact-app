@@ -13,6 +13,7 @@ class ScientistSerializer(serializers.ModelSerializer):
 
 class ScientificPublicationSerializer(serializers.ModelSerializer):
     authors = serializers.StringRelatedField(many=True)
+    citations = serializers.StringRelatedField(many=True)
 
     class Meta:
         model = Scientist
