@@ -1,9 +1,6 @@
-from django.http import HttpResponse, Http404
-#from rest_framework.views import APIView
-#from rest_framework.response import Response
-from rest_framework import generics, viewsets, permissions
-from sci_impact.models import Scientist
-from sci_impact.serializers import ScientistSerializer
+from rest_framework import viewsets, permissions
+from sci_impact.models import Scientist, ScientificPublication
+from sci_impact.serializers import ScientistSerializer, ScientificPublicationSerializer
 
 
 #def index(request):
@@ -26,4 +23,24 @@ class ScientistViewSet(viewsets.ModelViewSet):
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
     queryset = Scientist.objects.all()
     serializer_class = ScientistSerializer
+    http_method_names = ['get', 'post', 'head', 'delete']
+
+
+class ScientificPublicationViewSet(viewsets.ModelViewSet):
+    """
+    retrieve:
+    Return the given scientific publication.
+
+    list:
+    Return a list of all the existing scientific publication.
+
+    create:
+    Create a new scientific publication.
+
+    delete:
+    Delete the given scientific publication.
+    """
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    queryset = ScientificPublication.objects.all()
+    serializer_class = ScientificPublicationSerializer
     http_method_names = ['get', 'post', 'head', 'delete']

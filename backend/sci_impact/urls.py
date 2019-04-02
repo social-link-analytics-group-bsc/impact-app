@@ -7,6 +7,7 @@ from sci_impact import views
 # Create a router and register our viewsets with it.
 router = DefaultRouter()
 router.register('scientists', views.ScientistViewSet)
+router.register('publications', views.ScientificPublicationViewSet)
 
 
 urlpatterns = [
