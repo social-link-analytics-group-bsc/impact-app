@@ -1,16 +1,20 @@
-from django.conf.urls import include
-from django.urls import path
-from rest_framework.urlpatterns import format_suffix_patterns
-from rest_framework_swagger.views import get_swagger_view
-from . import views
+from django.urls import path, include
+#from rest_framework.urlpatterns import format_suffix_patterns
+from rest_framework.routers import DefaultRouter
+from sci_impact import views
 
-schema_view = get_swagger_view(title='Scientific Impact API')
+
+# Create a router and register our viewsets with it.
+router = DefaultRouter()
+router.register('scientists', views.ScientistViewSet)
+
 
 urlpatterns = [
-    path('', schema_view),
-    path('scientists/', views.ScientistList.as_view()),
-    path('scientists/<int:pk>/', views.ScientistDetail.as_view()),
-    path('api-auth/', include('rest_framework.urls')),
+    # ex: /api/scientist/
+    #re_path(r'^scientists/$', scientist_list),
+    # ex: /api/scientist/1
+    #re_path(r'^scientists/(?P<pk>[0-9]+)/$', scientist_detail),
+    path('', include(router.urls)),
 ]
 
-urlpatterns = format_suffix_patterns(urlpatterns)
+#urlpatterns = format_suffix_patterns(urlpatterns)
