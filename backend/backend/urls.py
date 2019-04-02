@@ -15,10 +15,20 @@ Including another URLconf
 """
 
 from django.contrib import admin
-from django.urls import include, path
+from django.urls import re_path
+from django.conf.urls import include
+from rest_framework_swagger.views import get_swagger_view
 
+schema_view = get_swagger_view(title='Impact App API')
 
 urlpatterns = [
-    path('sci_impact/', include('sci_impact.urls')),
-    path('admin/', admin.site.urls),
+    # root endpoint
+    re_path(r'^api/$', schema_view),
+    # sci_impact endpoints
+    re_path(r'^api/sci_impact/', include('sci_impact.urls')),
+    # admin view
+    re_path(r'^admin/', admin.site.urls),
+    # authentication
+    re_path(r'^api-auth/', include('rest_framework.urls')),
 ]
+
