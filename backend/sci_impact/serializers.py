@@ -4,7 +4,7 @@ from sci_impact.models import Country, City, Region, Citation,Scientist, Book, D
 
 
 class ScientistSerializer(serializers.ModelSerializer):
-    country = serializers.SlugRelatedField(many=False, read_only=True, slug_field='name')
+    nationality = serializers.SlugRelatedField(many=False, read_only=True, slug_field='name')
 
     class Meta:
         model = Scientist
