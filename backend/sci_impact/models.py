@@ -134,6 +134,7 @@ class ScientificPublication(models.Model):
     doi = models.CharField(max_length=255, null=True, blank=True)
     year = models.IntegerField()
     category = models.CharField(max_length=100, null=True, blank=True)
+    source = models.CharField(max_length=100, default='')
     url = models.URLField(null=True, blank=True)
     citations = models.ManyToManyField(Citation, blank=True)
     # related_name means how the relationship will be named in the Scientist model
