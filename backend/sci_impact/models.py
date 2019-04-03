@@ -21,6 +21,14 @@ CITATION_TYPE = (
     ('patent', 'Patent'),
 )
 
+ACADEMIC_DBS = (
+    ('gscholar', 'Google Scholar'),
+    ('wos', 'Web of Science'),
+    ('scopus', 'Scopus'),
+    ('pubmed', 'PubMed'),
+    ('other', 'Other'),
+)
+
 
 class Country(models.Model):
     name = models.CharField(max_length=100)
@@ -135,6 +143,7 @@ class ScientificPublication(models.Model):
     year = models.IntegerField()
     category = models.CharField(max_length=100, null=True, blank=True)
     source = models.CharField(max_length=100, default='')
+    academic_db = models.CharField(max_length=100, choices=ACADEMIC_DBS, default='other')
     url = models.URLField(null=True, blank=True)
     citations = models.ManyToManyField(Citation, blank=True)
     # related_name means how the relationship will be named in the Scientist model
