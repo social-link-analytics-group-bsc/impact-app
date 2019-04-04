@@ -164,8 +164,8 @@ class ScientificAuthorship(models.Model):
 class Affiliation(models.Model):
     scientist = models.ForeignKey(Scientist, on_delete=models.CASCADE)
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE)
-    date_joined = models.DateField(null=True, blank=True)
-    date_left = models.DateField(null=True, blank=True)
+    joined_date = models.DateField(null=True, blank=True)
+    departure_date = models.DateField(null=True, blank=True)
     # production
     scientific_publications = models.IntegerField(default=0)
     scientific_publications_as_first_author = models.IntegerField(default=0)

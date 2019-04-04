@@ -45,4 +45,4 @@ class InstitutionAdmin(admin.ModelAdmin):
 
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
-    list_display = ('scientist', 'institution', 'date_joined')
+    list_display = ('scientist', 'institution', 'joined_date')
