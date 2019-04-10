@@ -94,8 +94,10 @@ class Scientist(models.Model):
     last_name = models.CharField(max_length=100, default='')
     birth_date = models.DateField(null=True, blank=True)
     orcid = models.CharField(max_length=50, null=True, blank=True)
+    scopus_id = models.CharField(max_length=50, null=True, blank=True)
+    pmc_id = models.CharField(max_length=50, null=True, blank=True)
     gender = models.CharField(max_length=50, null=True, blank=True, choices=GENDERS)
-    nationality = models.ForeignKey(Country, on_delete=models.CASCADE)
+    nationality = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True)
     # production
     scientific_publications_as_first_author = models.IntegerField(default=0)
     scientific_publications_with_citations = models.IntegerField(default=0)
@@ -143,6 +145,10 @@ class ScientificPublication(models.Model):
     year = models.IntegerField()
     category = models.CharField(max_length=100, null=True, blank=True)
     source = models.CharField(max_length=100, default='')
+    language = models.CharField(max_length=50, default='eng')
+    pmc_id = models.CharField(max_length=50, default='')
+    scopus_id = models.CharField(max_length=50, default='')
+    epmc_id = models.CharField(max_length=50, default='')
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_DBS, default='other')
     url = models.URLField(null=True, blank=True)
     citations = models.ManyToManyField(Citation, blank=True)
@@ -186,6 +192,9 @@ class Affiliation(models.Model):
 
     def __str__(self):
         return f"{self.scientist.last_name}, {self.scientist.first_name} - {self.institution.name}"
+
+
+# TODO: Add a model for scientific publication venues (journals or conferences)
 
 
 ####
