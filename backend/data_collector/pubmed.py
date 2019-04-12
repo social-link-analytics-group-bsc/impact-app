@@ -12,6 +12,7 @@ import time
 logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
                     level=logging.DEBUG)
 
+
 class EntrezClient:
     __entrez = None
 
@@ -61,23 +62,57 @@ class EntrezClient:
         ids = ','.join(id_list)
         handle = self.__entrez.efetch(db='pubmed', retmode='xml', id=ids)
         results = self.__entrez.read(handle)
-        return results
+        return results['PubmedArticle']
 
-    #def get_paper_citations(id):
-    #    handle = Entrez.elink(dbfrom="pubmed", id=id, linkname="pubmed_pubmed")
-    #    record = Entrez.read(handle)
-    #    handle.close()
-    #    print(record[0]["LinkSetDb"][0]["LinkName"])
-    #    linked = [link["Id"] for link in record[0]["LinkSetDb"][0]["Link"]]
-    #    pass
+    ####
+    # Caveat: It only covers journals indexes for PubMed Central
+    ####
+    def get_paper_citations(self, pm_id):
+        paper_citations = None
+        handle = self.__entrez.elink(dbfrom="pubmed", db="pmc", LinkName="pubmed_pmc_refs", id=pm_id)
+        results_pmc = self.__entrez.read(handle)
+        handle.close()
+        if len(results_pmc[0]['LinkSetDb']) > 0:
+            pmc_ids = [link["Id"] for link in results_pmc[0]["LinkSetDb"][0]["Link"]]
+            handle = self.__entrez.elink(dbfrom="pmc", db="pubmed", LinkName="pmc_pubmed", id=",".join(pmc_ids))
+            results_pm = self.__entrez.read(handle)
+            handle.close()
+            if len(results_pmc[0]['LinkSetDb']) > 0:
+                paper_citation_pm_ids = [link["Id"] for link in results_pm[0]["LinkSetDb"][0]["Link"]]
+                paper_citations = self.fetch_in_bulk_from_list(paper_citation_pm_ids)
+        return paper_citations
+
+    def get_papers_citations(self, pm_id_list):
+        for pm_id in pm_id_list:
+            self.get_paper_citations(pm_id)
+
+    ####
+    # Caveat: It only covers journals indexes for PubMed Central
+    ####
+    def get_paper_references(self, pm_id):
+        paper_references = None
+        handle = self.__entrez.elink(dbfrom='pubmed', linkname='pubmed_pubmed_refs', id=pm_id)
+        results_pm = self.__entrez.read(handle)
+        handle.close()
+        if len(results_pm[0]['LinkSetDb']) > 0:
+            paper_references_pm_ids = [link["Id"] for link in results_pm[0]["LinkSetDb"][0]["Link"]]
+            paper_references = self.fetch_in_bulk_from_list(paper_references_pm_ids)
+        return paper_references
+
+    def get_papers_references(self, pm_id_list):
+        for pm_id in pm_id_list:
+            self.get_paper_references(pm_id)
 
 
 if __name__ == '__main__':
     ec = EntrezClient()
     results = ec.search('Alfonso Valencia[author]')
-    #id_list = results['IdList']
-    #get_paper_citations(id_list[0])
-    #papers = fetch_summary(id_list)
     papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
     for i, paper in enumerate(papers):
-        print(f"{i + 1}) {paper['MedlineCitation']['Article']['ArticleTitle']}")
+        print(f"{i + 1}) {paper['MedlineCitation']['Article']['ArticleTitle']} ({paper['MedlineCitation']['PMID']})")
+    # print the title of the first paper
+    # print(papers[0]['MedlineCitation']['Article']['ArticleTitle'])
+    # get citations of the first paper
+    #pm_id = papers[15]['MedlineCitation']['PMID']
+    #ec.get_paper_citations(pm_id)
+    ec.get_paper_references('28934481')
