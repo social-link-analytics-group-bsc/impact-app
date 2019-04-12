@@ -1,11 +1,16 @@
-from elsapy.elsclient import ElsClient
-from elsapy.elsprofile import ElsAuthor, ElsAffil
-from elsapy.elsdoc import FullDoc, AbsDoc
-from elsapy.elssearch import ElsSearch
+# from elsapy.elsclient import ElsClient
+# from elsapy.elssearch import ElsSearch
 
+import bs4
 import json
-import scholarly
+import logging
+import requests
+import pathlib
+import time
 
+
+logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
+                    level=logging.DEBUG)
 
 ####
 # Scopus Collector
@@ -18,55 +23,50 @@ import scholarly
 # With my API key I can only use the search endpoint
 #
 ####
-class ScopusClient:
-    query_ret = None
-    api_client = None
-
-    def __init__(self):
-        con_file = open('scopus_config.json')
-        config = json.load(con_file)
-        con_file.close()
-        self.client = ElsClient(config['apikey'])
-
-    def get_author_publications_by_name(self, first_name, last_name):
-        auth_srch = ElsSearch(f"authlast({last_name})", 'author')
-        auth_srch.execute(self.client)
-        print("auth_srch has", len(auth_srch.results), "results.")
-
-
-####
-# Google Scholar collector
+# class ScopusClient:
+#     query_ret = None
+#     api_client = None
 #
-# Discussion about Google Scholar ToS
-# https://academia.stackexchange.com/questions/34970/how-to-get-permission-from-google-to-use-google-scholar-data-if-needed
-####
-class GScholarClient:
-    def __init__(self):
-        pass
-
-    def get_author_publication_by_name(self, first_name, last_name):
-        search_query = scholarly.search_author(f"{first_name} {last_name}")
-        author = next(search_query).fill()
-        publication_list = [pub.bib['title'] for pub in author.publications]
-        # Take a closer look at the first publication
-        most_popular_pub = author.publications[3].fill()
-        # Which papers cited the most popular publication?
-        citations_most_popular = most_popular_pub.get_citedby()
-        citation_titles = []
-        for citation in citations_most_popular:
-            citation_titles.append(citation.bib['title'])
-        pass
+#     def __init__(self):
+#         con_file = open('config.json')
+#         config = json.load(con_file)
+#         con_file.close()
+#         self.client = ElsClient(config['scopus']['api_key'])
+#
+#     def get_author_publications_by_name(self, first_name, last_name):
+#         auth_srch = ElsSearch(f"authlast({last_name})", 'author')
+#         auth_srch.execute(self.client)
+#         print("auth_srch has", len(auth_srch.results), "results.")
 
 
-# TODO: Add PubMed collector
+class ScopusWebCollector:
+    __search_url = 'https://www.scopus.com/authid/detail.uri?authorId='
 
-
-# TODO: Add WoS collector
+    def get_author_info(self, author_scopus_id):
+        url = self.__search_url + str(author_scopus_id)
+        ret_rq = requests.get(url)
+        time.sleep(20)
+        if ret_rq.status_code == 200:
+            author_info = dict()
+            dom = bs4.BeautifulSoup(ret_rq.text, 'html.parser')
+            doi_link = dom.find('a', {'title': 'View this author’s ORCID profile'})
+            if doi_link:
+                author_info['doi'] = doi_link.contents[1].text
+            h_index_panel = dom.find(id='authorDetailsHindex')
+            h_index = h_index_panel.find(class_='fontLarge')
+            if h_index:
+                author_info['h_index'] = h_index.text
+            num_papers_panel = dom.find(id='authorDetailsDocumentsByAuthor')
+            num_papers = num_papers_panel.find(class_='fontLarge pull-left')
+            if num_papers:
+                author_info['num_papers'] = num_papers.text
+            return author_info
+        else:
+            logging.error(f"Error {ret_rq.status_code} when trying to access the website {url}")
+            return None
 
 
 if __name__ == '__main__':
-    #sc = ScopusClient()
-    #sc.get_author_publications_by_name('Alfonso', 'Valencia')
-    #res = r.query_ret
-    gs = GScholarClient()
-    gs.get_author_publication_by_name('Alfonso', 'Valencia')
+    swc = ScopusWebCollector()
+    swc.get_author_info('16308427600')
+
