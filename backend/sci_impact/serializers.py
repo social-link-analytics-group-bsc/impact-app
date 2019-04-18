@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from sci_impact.models import Country, City, Region, Citation,Scientist, Book, Dataset, Tool, \
-                              Patent, Institution, Affiliation, ScientificPublication
+from sci_impact.models import Country, City, Region, Scientist, Book, Dataset, Tool, \
+                              Patent, Institution, Affiliation, Article
 
 
 class ScientistSerializer(serializers.ModelSerializer):
@@ -11,10 +11,10 @@ class ScientistSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class ScientificPublicationSerializer(serializers.ModelSerializer):
+class ArticleSerializer(serializers.ModelSerializer):
     authors = serializers.StringRelatedField(many=True)
-    citations = serializers.StringRelatedField(many=True)
+    # citations = serializers.StringRelatedField(many=True)
 
     class Meta:
-        model = Scientist
+        model = Article
         fields = '__all__'

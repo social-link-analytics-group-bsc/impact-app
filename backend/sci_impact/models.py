@@ -21,13 +21,40 @@ CITATION_TYPE = (
     ('patent', 'Patent'),
 )
 
-ACADEMIC_DBS = (
+ACADEMIC_REPO = (
     ('gscholar', 'Google Scholar'),
     ('wos', 'Web of Science'),
     ('scopus', 'Scopus'),
     ('pubmed', 'PubMed'),
     ('other', 'Other'),
 )
+
+DATA_TYPE = (
+    ('int', 'Integer'),
+    ('str', 'String'),
+    ('bool', 'Boolean'),
+    ('float', 'Float'),
+    ('list', 'List'),
+    ('dict', 'Dictionary'),
+)
+
+
+class Artifact(models.Model):
+    title = models.CharField(max_length=100)
+    year = models.IntegerField()
+    url = models.URLField(null=True, blank=True)
+    language = models.CharField(max_length=50, default='eng')
+
+
+class Person(models.Model):
+    first_name = models.CharField(max_length=100, default='')
+    last_name = models.CharField(max_length=100, default='')
+    birth_date = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=50, null=True, blank=True, choices=GENDERS)
+    nationality = models.ForeignKey('Country', on_delete=models.CASCADE, null=True, blank=True)
+
+    class Meta:
+        abstract = True
 
 
 class Country(models.Model):
@@ -71,33 +98,37 @@ class City(models.Model):
         verbose_name_plural = "cities"
 
 
-class Citation(models.Model):
-    title = models.CharField(max_length=100, null=True, blank=True)
-    cite_id = models.CharField(max_length=45)
-    url = models.URLField(blank=True, null=True)
-    type = models.CharField(max_length=50, choices=CITATION_TYPE)
+class CustomField(models.Model):
+    title = models.CharField(max_length=100)
+    value = models.CharField(max_length=100)
+    type = models.CharField(max_length=100, choices=DATA_TYPE, default='int')
+    source = models.URLField(null=True, blank=True)
 
     def __unicode__(self):
-        return f"{self.type}, {self.cite_id}"
+        return f"{self.title}: {self.value} ({self.type})"
 
     def __str__(self):
-        if self.title:
-            return f"{self.title}, {self.type}"
-        elif self.url:
-            return f"{self.url}, {self.type}"
-        else:
-            return f"{self.cite_id}, {self.type}"
+        return f"{self.title}: {self.value} ({self.type})"
 
 
-class Scientist(models.Model):
-    first_name = models.CharField(max_length=100, default='')
-    last_name = models.CharField(max_length=100, default='')
-    birth_date = models.DateField(null=True, blank=True)
+class Publication(models.Model):
+    name = models.CharField(max_length=100)
+    volume = models.IntegerField(null=True, blank=True)
+    number = models.IntegerField(null=True, blank=True)
+    issue = models.IntegerField(null=True, blank=True)
+    publisher = models.CharField(max_length=200, null=True, blank=True)
+
+    def __unicode__(self):
+        return f"{self.name}"
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class Scientist(Person):
     orcid = models.CharField(max_length=50, null=True, blank=True)
     scopus_id = models.CharField(max_length=50, null=True, blank=True)
     pmc_id = models.CharField(max_length=50, null=True, blank=True)
-    gender = models.CharField(max_length=50, null=True, blank=True, choices=GENDERS)
-    nationality = models.ForeignKey(Country, on_delete=models.CASCADE, null=True, blank=True)
     # production
     scientific_publications_as_first_author = models.IntegerField(default=0)
     scientific_publications_with_citations = models.IntegerField(default=0)
@@ -122,6 +153,61 @@ class Scientist(models.Model):
         return f"{self.first_name} {self.last_name}"
 
 
+class Article(Artifact):
+    doi = models.CharField(max_length=255, null=True, blank=True)
+    pages = models.CharField(max_length=50, null=True, blank=True)
+    category = models.CharField(max_length=100, null=True, blank=True)
+    venue = models.ForeignKey(Publication, on_delete=models.CASCADE)
+    academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
+    # publication id on academic repositories
+    repo_ids = models.ForeignKey(CustomField, on_delete=models.CASCADE)
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+
+class Book(Artifact):
+    isbn = models.CharField(max_length=20, null=True, blank=True)
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+
+class Dataset(Artifact):
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+
+class Tool(Artifact):
+    source_repo = models.URLField(null=True, blank=True)
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+
+class Patent(Artifact):
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+
+class ArtifactCitation(models.Model):
+    from_artifact = models.ForeignKey(Artifact, related_name='from_artifact', on_delete=models.CASCADE)
+    to_artifact = models.ForeignKey(Artifact, related_name='to_artifact', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('from_artifact', 'to_artifact')
+
+
+class Authorship(models.Model):
+    author = models.ForeignKey(Scientist, on_delete=models.CASCADE)
+    artifact = models.ForeignKey(Artifact, on_delete=models.CASCADE)
+    institution = models.ForeignKey('Institution', on_delete=models.CASCADE, null=True, blank=True)
+    first_author = models.BooleanField(default=False)
+    corresponding_author = models.BooleanField(default=False)
+
+
 class Institution(models.Model):
     name = models.CharField(max_length=100, default='')
     country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.CASCADE)
@@ -139,43 +225,15 @@ class Institution(models.Model):
         return self.name
 
 
-class ScientificPublication(models.Model):
-    title = models.CharField(max_length=100)
-    doi = models.CharField(max_length=255, null=True, blank=True)
-    year = models.IntegerField()
-    category = models.CharField(max_length=100, null=True, blank=True)
-    source = models.CharField(max_length=100, default='')
-    language = models.CharField(max_length=50, default='eng')
-    pmc_id = models.CharField(max_length=50, default='')
-    scopus_id = models.CharField(max_length=50, default='')
-    epmc_id = models.CharField(max_length=50, default='')
-    academic_db = models.CharField(max_length=100, choices=ACADEMIC_DBS, default='other')
-    url = models.URLField(null=True, blank=True)
-    citations = models.ManyToManyField(Citation, blank=True)
-    # related_name means how the relationship will be named in the Scientist model
-    authors = models.ManyToManyField(Scientist, through='ScientificAuthorship', related_name='scientific_publications')
-
-    def __unicode__(self):
-        return f"{self.title}"
-
-
-class ScientificAuthorship(models.Model):
-    scientist = models.ForeignKey(Scientist, on_delete=models.CASCADE)
-    scientific_publication = models.ForeignKey(ScientificPublication, on_delete=models.CASCADE)
-    institution = models.ForeignKey(Institution, on_delete=models.CASCADE, null=True, blank=True)
-    first_author = models.BooleanField(default=False)
-    corresponding_author = models.BooleanField(default=False)
-
-
 class Affiliation(models.Model):
     scientist = models.ForeignKey(Scientist, on_delete=models.CASCADE)
     institution = models.ForeignKey(Institution, on_delete=models.CASCADE)
     joined_date = models.DateField(null=True, blank=True)
     departure_date = models.DateField(null=True, blank=True)
     # production
-    scientific_publications = models.IntegerField(default=0)
-    scientific_publications_as_first_author = models.IntegerField(default=0)
-    scientific_publications_with_citations = models.IntegerField(default=0)
+    articles = models.IntegerField(default=0)
+    articles_as_first_author = models.IntegerField(default=0)
+    articles_with_citations = models.IntegerField(default=0)
     books = models.IntegerField(default=0)
     patents = models.IntegerField(default=0)
     datasets = models.IntegerField(default=0)
@@ -188,62 +246,27 @@ class Affiliation(models.Model):
     total_citations = models.IntegerField(default=0)
 
     def __unicode__(self):
-        return f"{self.scientist.last_name}, {self.scientist.first_name} - {self.institution.name}"
+        return f"{self.scientist.last_name}, {self.scientist.first_name}, {self.institution.name}"
 
     def __str__(self):
-        return f"{self.scientist.last_name}, {self.scientist.first_name} - {self.institution.name}"
+        return f"{self.scientist.last_name}, {self.scientist.first_name}, {self.institution.name}"
 
 
-# TODO: Add a model for scientific publication venues (journals or conferences)
+# class Citation(models.Model):
+#     title = models.CharField(max_length=100, null=True, blank=True)
+#     cite_id = models.CharField(max_length=45)
+#     url = models.URLField(blank=True, null=True)
+#     type = models.CharField(max_length=50, choices=CITATION_TYPE)
+#
+#     def __unicode__(self):
+#         return f"{self.type}, {self.cite_id}"
+#
+#     def __str__(self):
+#         if self.title:
+#             return f"{self.title}, {self.type}"
+#         elif self.url:
+#             return f"{self.url}, {self.type}"
+#         else:
+#             return f"{self.cite_id}, {self.type}"
 
 
-####
-# TODO: Improve the following models taking as example the scientific publication.
-# Ex. Improve the authors field by adding the intermediate model as it is done
-# in the scientific publication model
-####
-
-class Book(models.Model):
-    title = models.CharField(max_length=100)
-    isbn = models.CharField(max_length=20, null=True, blank=True)
-    year = models.IntegerField()
-    url = models.URLField(null=True, blank=True)
-    citations = models.ManyToManyField(Citation, blank=True)
-    authors = models.ManyToManyField(Scientist)
-
-    def __unicode__(self):
-        return f"{self.title}"
-
-
-class Dataset(models.Model):
-    name = models.CharField(max_length=100)
-    year = models.IntegerField(null=True, blank=True)
-    url = models.URLField(null=True, blank=True)
-    citations = models.ManyToManyField(Citation, blank=True)
-    authors = models.ManyToManyField(Scientist)
-
-    def __unicode__(self):
-        return f"{self.name}"
-
-
-class Tool(models.Model):
-    name = models.CharField(max_length=100)
-    year = models.IntegerField(null=True, blank=True)
-    url = models.URLField(null=True, blank=True)
-    source_repo = models.URLField(null=True, blank=True)
-    citations = models.ManyToManyField(Citation, blank=True)
-    authors = models.ManyToManyField(Scientist)
-
-    def __unicode__(self):
-        return f"{self.name}"
-
-
-class Patent(models.Model):
-    title = models.CharField(max_length=100)
-    year = models.IntegerField()
-    url = models.URLField(null=True, blank=True)
-    citations = models.ManyToManyField(Citation, blank=True)
-    authors = models.ManyToManyField(Scientist)
-
-    def __unicode__(self):
-        return f"{self.title}"

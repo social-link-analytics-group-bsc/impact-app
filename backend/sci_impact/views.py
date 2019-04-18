@@ -1,6 +1,6 @@
 from rest_framework import viewsets, permissions
-from sci_impact.models import Scientist, ScientificPublication
-from sci_impact.serializers import ScientistSerializer, ScientificPublicationSerializer
+from sci_impact.models import Scientist, Article
+from sci_impact.serializers import ScientistSerializer, ArticleSerializer
 
 
 #def index(request):
@@ -26,7 +26,7 @@ class ScientistViewSet(viewsets.ModelViewSet):
     http_method_names = ['get', 'post', 'head', 'delete']
 
 
-class ScientificPublicationViewSet(viewsets.ModelViewSet):
+class ArticleViewSet(viewsets.ModelViewSet):
     """
     retrieve:
     Return the given scientific publication.
@@ -41,6 +41,6 @@ class ScientificPublicationViewSet(viewsets.ModelViewSet):
     Delete the given scientific publication.
     """
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    queryset = ScientificPublication.objects.all()
-    serializer_class = ScientificPublicationSerializer
+    queryset = Article.objects.all()
+    serializer_class = ArticleSerializer
     http_method_names = ['get', 'post', 'head', 'delete']
