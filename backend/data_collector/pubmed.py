@@ -21,44 +21,48 @@ class EntrezClient:
         self.__entrez.email = config_file['pubmed']['email']
         self.__entrez.api_key = config_file['pubmed']['api_key']
 
-    def search(self, query):
-        handle = self.__entrez.esearch(db='pubmed', sort='relevance', retmode='xml',
-                                       usehistory='y', term=query)
+    def search(self, query, db='pubmed', use_history=True, batch_size=20):
+        if use_history:
+            handle = self.__entrez.esearch(db=db, sort='relevance', retmode='xml',
+                                           usehistory='y', term=query, retmax=batch_size)
+        else:
+            handle = self.__entrez.esearch(db=db, sort='relevance', retmode='xml',
+                                           term=query, retmax=batch_size)
         results = self.__entrez.read(handle)
         handle.close()
         return results
 
     def fetch_in_batch_from_history(self, num_results_to_fetch, webenv, query_key,
-                                    batch_size=20):
+                                    db='pubmed', batch_size=20):
         MAX_ATTEMPTS = 5
         results = []
         num_results_to_fetch = int(num_results_to_fetch)
         for start in range(0, num_results_to_fetch, batch_size):
             end = min(num_results_to_fetch, start + batch_size)
-            logging.info(f"Downloading records from {start+1} to {end}")
+            logging.info(f"Downloading records from {start + 1} to {end}")
             attempt = 0
             while attempt < MAX_ATTEMPTS:
                 attempt += 1
                 try:
-                    handle = self.__entrez.efetch(db='pubmed', retmode='xml',
+                    handle = self.__entrez.efetch(db=db, retmode='xml',
                                                   rettype='medline', retstart=start,
                                                   retmax=batch_size, webenv=webenv,
                                                   query_key=query_key)
                 except HTTPError as err:
                     if 500 <= err.code <= 599:
-                        logging.error(f'Received error from server {err}')
-                        logging.error(f'Attempt {attempt} of {MAX_ATTEMPTS}')
+                        logging.error(f"Received error from server {err}")
+                        logging.error(f"Attempt {attempt} of {MAX_ATTEMPTS}")
                         time.sleep(15)
                     else:
                         raise
-            records = Entrez.read(handle)
+            records = self.__entrez.read(handle)
             for record in records['PubmedArticle']:
                 results.append(record)
         return results
 
-    def fetch_in_bulk_from_list(self, id_list):
+    def fetch_in_bulk_from_list(self, id_list, db='pubmed'):
         ids = ','.join(id_list)
-        handle = self.__entrez.efetch(db='pubmed', retmode='xml', id=ids)
+        handle = self.__entrez.efetch(db=db, rettype='medline', retmode='xml', id=ids)
         results = self.__entrez.read(handle)
         return results['PubmedArticle']
 
