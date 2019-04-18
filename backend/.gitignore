@@ -31,3 +31,5 @@ var/
 *.pot
 *.pyc
 __pycache__/
+
+config.json
