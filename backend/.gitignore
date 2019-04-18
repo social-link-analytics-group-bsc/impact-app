@@ -31,7 +31,3 @@ var/
 *.pot
 *.pyc
 __pycache__/
-
-backend/settings.py
-django_admin_superuser.txt
-data_collector/config.json
