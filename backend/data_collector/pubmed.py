@@ -1,5 +1,4 @@
 from Bio import Entrez
-from Bio import Medline
 from urllib.error import HTTPError
 from data_collector.utils import get_config
 
@@ -34,7 +33,6 @@ class EntrezClient:
         MAX_ATTEMPTS = 5
         results = []
         num_results_to_fetch = int(num_results_to_fetch)
-        out_handle = open('recent_orchid_papers.txt', "w")
         for start in range(0, num_results_to_fetch, batch_size):
             end = min(num_results_to_fetch, start + batch_size)
             logging.info(f"Downloading records from {start+1} to {end}")
@@ -48,8 +46,8 @@ class EntrezClient:
                                                   query_key=query_key)
                 except HTTPError as err:
                     if 500 <= err.code <= 599:
-                        logging.error(f"Received error from server {err}")
-                        logging.error(f"Attempt {attempt} of {MAX_ATTEMPTS}")
+                        logging.error(f'Received error from server {err}')
+                        logging.error(f'Attempt {attempt} of {MAX_ATTEMPTS}')
                         time.sleep(15)
                     else:
                         raise
@@ -69,16 +67,16 @@ class EntrezClient:
     ####
     def get_paper_citations(self, pm_id):
         paper_citations = None
-        handle = self.__entrez.elink(dbfrom="pubmed", db="pmc", LinkName="pubmed_pmc_refs", id=pm_id)
+        handle = self.__entrez.elink(dbfrom='pubmed', db='pmc', LinkName='pubmed_pmc_refs', id=pm_id)
         results_pmc = self.__entrez.read(handle)
         handle.close()
         if len(results_pmc[0]['LinkSetDb']) > 0:
             pmc_ids = [link["Id"] for link in results_pmc[0]["LinkSetDb"][0]["Link"]]
-            handle = self.__entrez.elink(dbfrom="pmc", db="pubmed", LinkName="pmc_pubmed", id=",".join(pmc_ids))
+            handle = self.__entrez.elink(dbfrom='pmc', db='pubmed', LinkName='pmc_pubmed', id=','.join(pmc_ids))
             results_pm = self.__entrez.read(handle)
             handle.close()
             if len(results_pmc[0]['LinkSetDb']) > 0:
-                paper_citation_pm_ids = [link["Id"] for link in results_pm[0]["LinkSetDb"][0]["Link"]]
+                paper_citation_pm_ids = [link['Id'] for link in results_pm[0]['LinkSetDb'][0]['Link']]
                 paper_citations = self.fetch_in_bulk_from_list(paper_citation_pm_ids)
         return paper_citations
 
@@ -95,7 +93,7 @@ class EntrezClient:
         results_pm = self.__entrez.read(handle)
         handle.close()
         if len(results_pm[0]['LinkSetDb']) > 0:
-            paper_references_pm_ids = [link["Id"] for link in results_pm[0]["LinkSetDb"][0]["Link"]]
+            paper_references_pm_ids = [link['Id'] for link in results_pm[0]['LinkSetDb'][0]['Link']]
             paper_references = self.fetch_in_bulk_from_list(paper_references_pm_ids)
         return paper_references
 
@@ -104,15 +102,18 @@ class EntrezClient:
             self.get_paper_references(pm_id)
 
 
-if __name__ == '__main__':
-    ec = EntrezClient()
-    results = ec.search('Alfonso Valencia[author]')
-    papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
-    for i, paper in enumerate(papers):
-        print(f"{i + 1}) {paper['MedlineCitation']['Article']['ArticleTitle']} ({paper['MedlineCitation']['PMID']})")
-    # print the title of the first paper
-    # print(papers[0]['MedlineCitation']['Article']['ArticleTitle'])
-    # get citations of the first paper
-    #pm_id = papers[15]['MedlineCitation']['PMID']
-    #ec.get_paper_citations(pm_id)
-    ec.get_paper_references('28934481')
+#if __name__ == '__main__':
+#    ec = EntrezClient()
+    #results = ec.search('10.1093/bioinformatics/btx420[doi]')
+#    results = ec.fetch_in_bulk_from_list(['28666314'])
+#    print('Done!')
+#     results = ec.search('Alfonso Valencia[author]')
+#     papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
+#     for i, paper in enumerate(papers):
+#         print(f"{i + 1}) {paper['MedlineCitation']['Article']['ArticleTitle']} ({paper['MedlineCitation']['PMID']})")
+#     # print the title of the first paper
+#     # print(papers[0]['MedlineCitation']['Article']['ArticleTitle'])
+#     # get citations of the first paper
+#     #pm_id = papers[15]['MedlineCitation']['PMID']
+#     #ec.get_paper_citations(pm_id)
+#     ec.get_paper_references('28934481')
