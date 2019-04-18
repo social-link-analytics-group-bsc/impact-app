@@ -33,4 +33,5 @@ var/
 __pycache__/
 
 backend/settings.py
-superuser.txt
+django_admin_superuser.txt
+data_collector/config.json
