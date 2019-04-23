@@ -31,8 +31,7 @@ ACADEMIC_REPO = (
 
 VENUE_TYPE = (
     ('journal', 'Journal'),
-    ('conference', 'Conference'),
-    ('workshop', 'Workshop'),
+    ('proceeding', 'Proceeding'),
     ('other', 'Other'),
 )
 
@@ -121,6 +120,7 @@ class CustomField(models.Model):
 class Venue(models.Model):
     name = models.CharField(max_length=100)
     type = models.CharField(max_length=100, choices=DATA_TYPE, default='journal')
+    issn = models.IntegerField(null=True, blank=True)
     volume = models.IntegerField(null=True, blank=True)
     number = models.IntegerField(null=True, blank=True)
     issue = models.IntegerField(null=True, blank=True)
