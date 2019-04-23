@@ -29,6 +29,13 @@ ACADEMIC_REPO = (
     ('other', 'Other'),
 )
 
+VENUE_TYPE = (
+    ('journal', 'Journal'),
+    ('conference', 'Conference'),
+    ('workshop', 'Workshop'),
+    ('other', 'Other'),
+)
+
 DATA_TYPE = (
     ('int', 'Integer'),
     ('str', 'String'),
@@ -99,24 +106,28 @@ class City(models.Model):
 
 
 class CustomField(models.Model):
-    title = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
     value = models.CharField(max_length=100)
     type = models.CharField(max_length=100, choices=DATA_TYPE, default='int')
     source = models.URLField(null=True, blank=True)
 
     def __unicode__(self):
-        return f"{self.title}: {self.value} ({self.type})"
+        return f"{self.name}: {self.value} ({self.type})"
 
     def __str__(self):
-        return f"{self.title}: {self.value} ({self.type})"
+        return f"{self.name}: {self.value} ({self.type})"
 
 
-class Publication(models.Model):
+class Venue(models.Model):
     name = models.CharField(max_length=100)
+    type = models.CharField(max_length=100, choices=DATA_TYPE, default='journal')
     volume = models.IntegerField(null=True, blank=True)
     number = models.IntegerField(null=True, blank=True)
     issue = models.IntegerField(null=True, blank=True)
     publisher = models.CharField(max_length=200, null=True, blank=True)
+    impact_factor = models.IntegerField(null=True, blank=True)
+    conference_ranking = models.CharField(max_length=10, null=True, blank=True)
+    quartile = models.CharField(max_length=10, null=True, blank=True)
 
     def __unicode__(self):
         return f"{self.name}"
@@ -157,7 +168,7 @@ class Article(Artifact):
     doi = models.CharField(max_length=255, null=True, blank=True)
     pages = models.CharField(max_length=50, null=True, blank=True)
     category = models.CharField(max_length=100, null=True, blank=True)
-    venue = models.ForeignKey(Publication, on_delete=models.CASCADE)
+    venue = models.ForeignKey(Venue, on_delete=models.CASCADE)
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
     # publication id on academic repositories
     repo_ids = models.ForeignKey(CustomField, on_delete=models.CASCADE)
