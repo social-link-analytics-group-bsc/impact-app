@@ -1,10 +1,13 @@
 from collections import defaultdict
 from data_collector.pubmed import EntrezClient
+from data_collector.utils import get_gender, curate_text
 from django.contrib import admin, messages
-from sci_impact.models import Scientist, Country, Institution, City, Region, Affiliation, Venue, CustomField, Article
+from sci_impact.models import Scientist, Country, Institution, City, Region, Affiliation, Venue, Article, Authorship
 
 import logging
 import pathlib
+import requests
+import re
 
 logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
                     level=logging.DEBUG)
@@ -56,6 +59,43 @@ class ScientistAdmin(admin.ModelAdmin):
             self.message_user(request, msg, level=messages.INFO)
         return msg
 
+    def __get_paper_doi(self, paper):
+        if paper['PubmedData'].get('ArticleIdList'):
+            for other_id in paper['PubmedData']['ArticleIdList']:
+                if 'doi' in other_id.attributes.values():
+                    return other_id.title().lower()
+
+    def __get_paper_url(self, paper_doi):
+        BASE_URL = 'https://doi.org/'
+        paper_doi_url = BASE_URL + paper_doi
+        ret_rq = requests.get(paper_doi_url)
+        if ret_rq.status_code == 200:
+            return ret_rq.url
+        else:
+            return ''
+
+    def __get_paper_keywords(self, paper_meta_data):
+        keywords = paper_meta_data.get('KeywordList')
+        if keywords:
+            return ', '.join(keywords)
+        else:
+            return ''
+
+    def __get_institution_country(self, institution_name):
+        found_countries = []
+        countries = Country.objects.all()
+        for country in countries:
+            regex_country = re.compile(f", {country.name}$")
+            if regex_country.search(institution_name):
+                found_countries.append(country)
+        if found_countries:
+            if len(found_countries) > 1:
+                logging.warning(f"Found more than one country in the affiliation {', '.join(found_countries)}. "
+                                f"Returning the first one")
+            return found_countries[0]
+        else:
+            return None
+
     def get_articles(self, request, queryset):
         ec = EntrezClient()
         for obj in queryset:
@@ -65,34 +105,107 @@ class ScientistAdmin(admin.ModelAdmin):
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
-                paper_info = paper['MedlineCitation']['Article']
-                logging.info(f"Found the paper: {paper_info['ArticleTitle']}")
-                pubmed_id_obj = CustomField.objects.create(name='PubMed Id', value=paper['MedlineCitation']['PMID'],
-                                                           type='str', source='')
-                self.objs_created['CustomField'].append(pubmed_id_obj)
+                paper_meta_data = paper['MedlineCitation']['Article']
+                venue_meta_data = paper['MedlineCitation']['Article']['Journal']
+                logging.info(f"Found the paper: {paper_meta_data['ArticleTitle']}")
+                ###
+                # 1) Create/Retrieve paper's venue
+                ###
                 venue_dict = {
-                    'name': '',
-                    'volume': '',
-                    'number': '',
-                    'issue': '',
-                    'publisher': ''
+                    'name': venue_meta_data['Title'],
+                    'volume': venue_meta_data.get('JournalIssue').get('Volume'),
+                    'issn': venue_meta_data.get('ISSN')
                 }
-                venue_obj, created = Venue.objects.get_or_create(venue_dict)
+                if paper_meta_data.get('PublicationTypeList')[0] == 'Journal Article':
+                    venue_dict['type'] = 'journal'
+                elif paper_meta_data.get('PublicationTypeList')[0] == 'Conference Article':
+                    venue_dict['type'] = 'proceeding'
+                else:
+                    venue_dict['type'] = 'other'
+                venue_obj, created = Venue.objects.update_or_create(venue_dict)
                 if created: self.objs_created['Venue'].append(venue_obj)
+                ###
+                # 2) Create/Retrieve paper
+                ###
+                paper_doi = self.__get_paper_doi(paper)
+                paper_url = self.__get_paper_url(paper_doi)
+                paper_keywords = self.__get_paper_keywords(paper_meta_data)
                 article_dict = {
-                    'title': paper_info['ArticleTitle'],
-                    'year': paper_info[''],
-                    'url': paper_info[''],
-                    'language': paper_info[''],
-                    'doi': paper_info[''],
-                    'pages': paper_info[''],
-                    'category': paper_info[''],
+                    'title': curate_text(paper_meta_data['ArticleTitle']),
+                    'year': paper_meta_data['ArticleDate'][0].get('Year'),
+                    'url': paper_url,
+                    'language': paper_meta_data['Language'][0],
+                    'doi': paper_doi,
                     'academic_db': 'pubmed',
                     'venue': venue_obj,
+                    'keywords': paper_keywords
                 }
-                article_obj, created = Article.objects.get_or_create(article_dict, defaults={'doi': ''})
-                if created: article_obj.add(pubmed_id_obj)
-                self.objs_created['Article'].append(article_obj)
+                try:
+                    article_obj = Article.objects.get(doi=paper_doi)
+                except Article.DoesNotExist:
+                    article_obj = Article(article_dict)
+                    article_obj.save()
+                    if created: self.objs_created['Article'].append(article_obj)
+                ###
+                # 3) Create/Retrieve id
+                ###
+                id_dict = {
+                    'name': 'PubMed Id',
+                    'value': paper_meta_data['PMID'],
+                    'type': 'str'
+                }
+                pubmed_id_obj, created = article_obj.repo_ids.get_or_create(id_dict)
+                self.objs_created['CustomField'].append(pubmed_id_obj)
+                article_obj.repo_ids.add(pubmed_id_obj)
+                ###
+                # Iterate over the paper's authors
+                ###
+                paper_authors = paper_meta_data['AuthorList']
+                for index, author in enumerate(paper_authors):
+                    if 'ForeName' in author.keys():
+                        ###
+                        # 4) Create/Update author
+                        ###
+                        full_name = author['ForeName'] + ' ' + author['LastName']
+                        author_dict = {
+                            'first_name': author['ForeName'],
+                            'last_name': author['LastName'],
+                            'gender': get_gender(full_name)
+                        }
+                        author_obj, created = Scientist.objects.update_or_create(author_dict)
+                        if created: self.objs_created['Scientist'].append(author_obj)
+                        ###
+                        # Iterate over author's affiliations
+                        ###
+                        for affiliation_str in author['AffiliationInfo']:
+                            for affiliation_name in affiliation_str['Affiliation'].split(';'):
+                                ###
+                                # 5) Create/Retrieve institution
+                                ###
+                                institution_name = curate_text(affiliation_name)
+                                institution_country_obj = self.__get_institution_country(institution_name)
+                                institution_obj, created = Institution.objects.\
+                                    get_or_create(name=institution_name, country=institution_country_obj)
+                                if created: self.objs_created['Institution'].append(institution_obj)
+                                institution_obj.scientists.add(author_obj)
+                                ###
+                                # 6) Create/Retrieve author's affiliation
+                                ###
+                                affiliation_obj, created = Affiliation.objects.\
+                                    get_or_create(scientist=author_obj, institution=institution_obj)
+                                if created: self.objs_created['Institution'].append(affiliation_obj)
+                                ###
+                                # 7) Create/Retrieve article's authorship
+                                ###
+                                authorship_dict = {
+                                    'author': author_obj,
+                                    'artifact': article_obj,
+                                    'institution': institution_obj,
+                                    'first_author': index == 0
+                                }
+                                authorship_obj, created = Authorship.objects.get_or_create(authorship_dict)
+                                if created: self.objs_created['Institution'].append(authorship_obj)
+        self.__display_feedback_msg(request)
     get_articles.short_description = 'Get scientist\'s articles (PubMed)'
 
 
