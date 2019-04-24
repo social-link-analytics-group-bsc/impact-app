@@ -3,6 +3,7 @@ from hammock import Hammock as GendreAPI
 import gender_guesser.detector as gender
 import json
 import logging
+import re
 
 
 # Get configuration from file
@@ -31,8 +32,18 @@ def get_gender(full_name):
         return 'error_api'
 
 
-def curate_affiliation_name(affiliation_raw):
-    affiliation_clean = affiliation_raw.replace(' and ', ' ').rstrip(',').lstrip(',').rstrip('\t').lstrip('\t').\
-        rstrip('.')
-    affiliation_clean = ' '.join(affiliation_clean.split())  # remove duplicate whitespaces and newline characters
-    return affiliation_clean
+def curate_text(raw_text):
+    regex_l = re.compile('^[0-9]+')  # leading numbers
+    regex_t = re.compile('[0-9]+$')  # trailing numbers
+    clean_text = regex_l.sub('', raw_text)
+    clean_text = regex_t.sub('', clean_text)
+    clean_text = clean_text.replace(' and ', ' ')
+    clean_text = clean_text.strip()
+    clean_text = clean_text.rstrip(',')
+    clean_text = clean_text.lstrip(',')
+    clean_text = clean_text.rstrip('\t')
+    clean_text = clean_text.lstrip('\t')
+    clean_text = clean_text.rstrip('.')
+    # remove duplicate whitespaces and newline characters
+    clean_text = ' '.join(clean_text.split())
+    return clean_text
