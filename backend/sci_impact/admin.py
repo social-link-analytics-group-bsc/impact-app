@@ -63,7 +63,7 @@ class ScientistAdmin(admin.ModelAdmin):
         if paper['PubmedData'].get('ArticleIdList'):
             for other_id in paper['PubmedData']['ArticleIdList']:
                 if 'doi' in other_id.attributes.values():
-                    return other_id.title().lower()
+                    return other_id.lower()
 
     def __get_paper_url(self, paper_doi):
         BASE_URL = 'https://doi.org/'
@@ -96,6 +96,54 @@ class ScientistAdmin(admin.ModelAdmin):
         else:
             return None
 
+    def __create_update_venue(self, paper_meta_data, venue_meta_data):
+        venue_dict = {'name': venue_meta_data['Title']}
+        if venue_meta_data.get('JournalIssue').get('Volume'):
+            venue_dict['volume'] = str(venue_meta_data.get('JournalIssue').get('Volume'))
+        if venue_meta_data.get('JournalIssue').get('Issue'):
+            venue_dict['issue'] = str(venue_meta_data.get('JournalIssue').get('Issue'))
+        if venue_meta_data.get('JournalIssue').get('PubDate').get('Year'):
+            venue_dict['year'] = str(venue_meta_data.get('JournalIssue').get('PubDate').get('Year'))
+        if venue_meta_data.get('ISSN'):
+            venue_dict['issn'] = str(venue_meta_data.get('ISSN'))
+        if venue_meta_data.get('JournalIssue').get('PubDate').get('Month'):
+            venue_dict['month'] = str(venue_meta_data.get('JournalIssue').get('PubDate').get('Month'))
+        if venue_meta_data.get('JournalIssue').get('PubDate').get('Day'):
+            venue_dict['day'] = int(venue_meta_data.get('JournalIssue').get('PubDate').get('Day'))
+        if str(paper_meta_data.get('PublicationTypeList')[0]) == 'Journal Article':
+            venue_dict['type'] = 'journal'
+        elif str(paper_meta_data.get('PublicationTypeList')[0]) == 'Conference Article':
+            venue_dict['type'] = 'proceeding'
+        else:
+            venue_dict['type'] = 'other'
+        venue_obj, created = Venue.objects.update_or_create(venue_dict)
+        if created: self.objs_created['Venue'].append(venue_obj)
+        return venue_obj
+
+    def __create_update_article(self, paper, venue_obj):
+        paper_meta_data = paper['MedlineCitation']['Article']
+        paper_doi = self.__get_paper_doi(paper)
+        paper_url = self.__get_paper_url(paper_doi)
+        paper_keywords = self.__get_paper_keywords(paper[''])
+        article_dict = {
+            'title': curate_text(paper_meta_data['ArticleTitle']),
+            'year': paper['MedlineCitation']['DateCompleted']['Year'],
+            'url': paper_url,
+            'doi': paper_doi,
+            'academic_db': 'pubmed',
+            'venue': venue_obj,
+            'keywords': paper_keywords
+        }
+        if  paper_meta_data.get('Language'):
+            article_dict['language'] = paper_meta_data.get('Language')[0]
+        try:
+            article_obj = Article.objects.get(doi=paper_doi)
+        except Article.DoesNotExist:
+            article_obj = Article(article_dict)
+            article_obj.save()
+            self.objs_created['Article'].append(article_obj)
+        return article_obj
+
     def get_articles(self, request, queryset):
         ec = EntrezClient()
         for obj in queryset:
@@ -111,47 +159,17 @@ class ScientistAdmin(admin.ModelAdmin):
                 ###
                 # 1) Create/Retrieve paper's venue
                 ###
-                venue_dict = {
-                    'name': venue_meta_data['Title'],
-                    'volume': venue_meta_data.get('JournalIssue').get('Volume'),
-                    'issn': venue_meta_data.get('ISSN')
-                }
-                if paper_meta_data.get('PublicationTypeList')[0] == 'Journal Article':
-                    venue_dict['type'] = 'journal'
-                elif paper_meta_data.get('PublicationTypeList')[0] == 'Conference Article':
-                    venue_dict['type'] = 'proceeding'
-                else:
-                    venue_dict['type'] = 'other'
-                venue_obj, created = Venue.objects.update_or_create(venue_dict)
-                if created: self.objs_created['Venue'].append(venue_obj)
+                venue_obj = self.__create_update_venue(paper_meta_data, venue_meta_data)
                 ###
                 # 2) Create/Retrieve paper
                 ###
-                paper_doi = self.__get_paper_doi(paper)
-                paper_url = self.__get_paper_url(paper_doi)
-                paper_keywords = self.__get_paper_keywords(paper_meta_data)
-                article_dict = {
-                    'title': curate_text(paper_meta_data['ArticleTitle']),
-                    'year': paper_meta_data['ArticleDate'][0].get('Year'),
-                    'url': paper_url,
-                    'language': paper_meta_data['Language'][0],
-                    'doi': paper_doi,
-                    'academic_db': 'pubmed',
-                    'venue': venue_obj,
-                    'keywords': paper_keywords
-                }
-                try:
-                    article_obj = Article.objects.get(doi=paper_doi)
-                except Article.DoesNotExist:
-                    article_obj = Article(article_dict)
-                    article_obj.save()
-                    if created: self.objs_created['Article'].append(article_obj)
+                article_obj = self.__create_update_article(paper, venue_obj)
                 ###
                 # 3) Create/Retrieve id
                 ###
                 id_dict = {
                     'name': 'PubMed Id',
-                    'value': paper_meta_data['PMID'],
+                    'value': str(paper_meta_data['PMID']),
                     'type': 'str'
                 }
                 pubmed_id_obj, created = article_obj.repo_ids.get_or_create(id_dict)
