@@ -218,7 +218,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                         institution_name = curate_text(affiliation_name)
                                         institution_country_obj = self.__get_institution_country(institution_name)
                                         institution_obj, created = Institution.objects.\
-                                            get_or_create(name=institution_name, country=institution_country_obj)
+                                            udpate_or_create(name=institution_name, country=institution_country_obj)
                                         if created: self.objs_created['Institution'].append(institution_obj)
                                         ###
                                         # 6) Create/Retrieve author's affiliation
@@ -236,7 +236,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                             'first_author': index == 0
                                         }
                                         authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
-                                        if created: self.objs_created['Institution'].append(authorship_obj)
+                                        if created: self.objs_created['Authorship'].append(authorship_obj)
                 except IntegrityError as e:
                     # Transaction failed, log the error and continue with the paper
                     logging.error(e)
