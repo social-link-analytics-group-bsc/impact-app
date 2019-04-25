@@ -127,7 +127,7 @@ class Venue(models.Model):
     year = models.IntegerField(null=True, blank=True)
     month = models.CharField(max_length=10, null=True, blank=True)
     day = models.IntegerField(null=True, blank=True)
-    publisher = models.CharField(max_length=200, null=True, blank=True)
+    publisher = models.CharField(max_length=300, null=True, blank=True)
     impact_factor = models.IntegerField(null=True, blank=True)
     conference_ranking = models.CharField(max_length=10, null=True, blank=True)
     quartile = models.CharField(max_length=10, null=True, blank=True)
@@ -168,9 +168,9 @@ class Scientist(Person):
 
 
 class Article(Artifact):
-    doi = models.CharField(max_length=255, null=True, blank=True)
+    doi = models.CharField(max_length=300, null=True, blank=True)
     pages = models.CharField(max_length=50, null=True, blank=True)
-    keywords = models.CharField(max_length=100, null=True, blank=True)
+    keywords = models.CharField(max_length=300, null=True, blank=True)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE)
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
     # publication id on academic repositories
@@ -238,7 +238,7 @@ class Authorship(models.Model):
 
 
 class Institution(models.Model):
-    name = models.CharField(max_length=100, default='')
+    name = models.CharField(max_length=300, default='')
     country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.CASCADE)
     region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.CASCADE)
     city = models.ForeignKey(City, null=True, blank=True, on_delete=models.CASCADE)
