@@ -159,7 +159,7 @@ class ScientistAdmin(admin.ModelAdmin):
                 ###
                 # 1) Create/Retrieve paper's venue
                 ###
-                venue_obj = self.__create_update_venue(paper_meta_data, venue_meta_data)
+I                venue_obj = self.__create_update_venue(paper_meta_data, venue_meta_data)
                 ###
                 # 2) Create/Retrieve paper
                 ###
