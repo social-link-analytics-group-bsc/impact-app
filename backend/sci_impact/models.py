@@ -46,7 +46,7 @@ DATA_TYPE = (
 
 
 class Artifact(models.Model):
-    title = models.CharField(max_length=100)
+    title = models.CharField(max_length=300)
     year = models.IntegerField()
     url = models.URLField(null=True, blank=True)
     language = models.CharField(max_length=50, default='eng')
@@ -118,7 +118,7 @@ class CustomField(models.Model):
 
 
 class Venue(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=300)
     type = models.CharField(max_length=100, choices=DATA_TYPE, default='journal')
     issn = models.CharField(max_length=10, null=True, blank=True)
     volume = models.IntegerField(null=True, blank=True)
