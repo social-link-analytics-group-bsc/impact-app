@@ -217,14 +217,18 @@ class ScientistAdmin(admin.ModelAdmin):
                                         ###
                                         institution_name = curate_text(affiliation_name)
                                         institution_country_obj = self.__get_institution_country(institution_name)
-                                        institution_obj, created = Institution.objects.\
-                                            udpate_or_create(name=institution_name, country=institution_country_obj)
+                                        institution_obj, created = Institution.objects.update_or_create(
+                                            name=institution_name,
+                                            country=institution_country_obj
+                                        )
                                         if created: self.objs_created['Institution'].append(institution_obj)
                                         ###
                                         # 6) Create/Retrieve author's affiliation
                                         ###
-                                        affiliation_obj, created = Affiliation.objects.\
-                                            get_or_create(scientist=author_obj, institution=institution_obj)
+                                        affiliation_obj, created = Affiliation.objects.get_or_create(
+                                            scientist=author_obj,
+                                            institution=institution_obj
+                                        )
                                         if created: self.objs_created['Institution'].append(affiliation_obj)
                                         ###
                                         # 7) Create/Retrieve article's authorship
