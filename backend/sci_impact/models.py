@@ -179,6 +179,9 @@ class Article(Artifact):
     def __unicode__(self):
         return f"{self.title}"
 
+    def __str__(self):
+        return f"{self.title}"
+
 
 class Book(Artifact):
     isbn = models.CharField(max_length=20, null=True, blank=True)
@@ -186,10 +189,16 @@ class Book(Artifact):
     def __unicode__(self):
         return f"{self.title}"
 
+    def __str__(self):
+        return f"{self.title}"
+
 
 class Dataset(Artifact):
 
     def __unicode__(self):
+        return f"{self.title}"
+
+    def __str__(self):
         return f"{self.title}"
 
 
@@ -199,10 +208,16 @@ class Tool(Artifact):
     def __unicode__(self):
         return f"{self.title}"
 
+    def __str__(self):
+        return f"{self.title}"
+
 
 class Patent(Artifact):
 
     def __unicode__(self):
+        return f"{self.title}"
+
+    def __str__(self):
         return f"{self.title}"
 
 
@@ -230,7 +245,6 @@ class Institution(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     web_page = models.URLField(blank=True, null=True)
-    scientists = models.ManyToManyField(Scientist, through='Affiliation')
 
     def __unicode__(self):
         return f"{self.name}"
