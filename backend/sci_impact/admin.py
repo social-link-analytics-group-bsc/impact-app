@@ -184,11 +184,7 @@ class ScientistAdmin(admin.ModelAdmin):
                             'value': str(paper['MedlineCitation']['PMID']),
                             'type': 'str'
                         }
-                        #try:
                         pubmed_id_obj, created = CustomField.objects.get_or_create(**id_dict)
-                        #except CustomField.DoesNotExist:
-                        #    pubmed_id_obj = CustomField(**id_dict)
-                        #pubmed_id_obj.save()
                         if created: self.objs_created['CustomField'].append(pubmed_id_obj)
                         ###
                         # 3) Create/Retrieve paper
