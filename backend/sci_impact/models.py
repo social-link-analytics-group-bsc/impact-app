@@ -66,6 +66,7 @@ class Person(models.Model):
 class Country(models.Model):
     name = models.CharField(max_length=100)
     iso_code = models.CharField(max_length=3, null=True, blank=True)
+    alternative_names = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return f"{self.name}"
