@@ -135,12 +135,14 @@ class ScientistAdmin(admin.ModelAdmin):
         paper_meta_data = paper['MedlineCitation']['Article']
         paper_doi = self.__get_paper_doi(paper)
         paper_keywords = self.__get_paper_keywords(paper['MedlineCitation']['Article'])
+        paper_url = self.__get_paper_url(paper_doi)
         article_dict = {
             'title': curate_text(paper_meta_data['ArticleTitle']),
             'doi': paper_doi,
             'academic_db': 'pubmed',
             'venue': venue_obj,
-            'repo_ids': id_obj
+            'repo_ids': id_obj,
+            'url': paper_url
         }
         if paper_meta_data.get('Language'):
             article_dict['language'] = str(paper_meta_data.get('Language')[0])
@@ -154,16 +156,9 @@ class ScientistAdmin(admin.ModelAdmin):
             raise Exception(f"Couldn't find the year of the article {article_dict['title']}")
         if paper_keywords:
             article_dict['keywords'] = paper_keywords
-        try:
-            article_obj = Article.objects.get(doi__exact=paper_doi)
-            Article.objects.filter(doi__exact=paper_doi).update(**article_dict)
-        except Article.DoesNotExist:
-            # Getting the url is an expensive process because it requires to hit the doi page,
-            # we only compute if the article does not exist already
-            article_dict['url'] = self.__get_paper_url(paper_doi)
-            article_obj = Article(**article_dict)
-            article_obj.save()
-            self.objs_created['Article'].append(article_obj)
+        article_obj = Article(**article_dict)
+        article_obj.save()
+        self.objs_created['Article'].append(article_obj)
         return article_obj
 
     def get_articles(self, request, queryset):
@@ -174,105 +169,109 @@ class ScientistAdmin(admin.ModelAdmin):
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
-                paper_meta_data = paper['MedlineCitation']['Article']
-                venue_meta_data = paper['MedlineCitation']['Article']['Journal']
-                logging.info(f"Found the paper: {paper_meta_data['ArticleTitle']}")
+                paper_doi = self.__get_paper_doi(paper)
                 try:
-                    with transaction.atomic():
-                        ###
-                        # 1) Create/Retrieve paper's venue
-                        ###
-                        venue_obj = self.__create_update_venue(paper_meta_data, venue_meta_data)
-                        ###
-                        # 2) Create/Retrieve pubmed id
-                        ###
-                        id_dict = {
-                            'name': 'PubMed Id',
-                            'value': str(paper['MedlineCitation']['PMID']),
-                            'type': 'str'
-                        }
-                        pubmed_id_obj, created = CustomField.objects.get_or_create(**id_dict)
-                        if created: self.objs_created['CustomField'].append(pubmed_id_obj)
-                        ###
-                        # 3) Create/Retrieve paper
-                        ###
-                        article_obj = self.__create_update_article(paper, venue_obj, pubmed_id_obj)
-                        ###
-                        # Iterate over the paper's authors
-                        ###
-                        paper_authors = paper_meta_data['AuthorList']
-                        for index, author in enumerate(paper_authors):
-                            if 'ForeName' in author.keys():
-                                ###
-                                # 4) Create/Update author
-                                ###
-                                author_dict = {
-                                    'first_name': author['ForeName'],
-                                    'last_name': author['LastName']
-                                }
-                                try:
-                                    author_obj = Scientist.objects.get(
-                                        first_name__iexact=author_dict['first_name'],
-                                        last_name__iexact=author_dict['last_name']
-                                    )
-                                except Scientist.DoesNotExist:
-                                    full_name = author['ForeName'] + ' ' + author['LastName']
-                                    author_dict['gender'] = get_gender(full_name)
-                                    author_obj = Scientist(**author_dict)
-                                    author_obj.save()
-                                    self.objs_created['Scientist'].append(author_obj)
-                                # Update scientists' publication metrics
-                                author_obj.articles += 1
-                                if index == 0:
-                                    author_obj.articles_as_first_author += 1
-                                author_obj.save()
-                                ###
-                                # Iterate over author's affiliations
-                                ###
-                                for affiliation_str in author['AffiliationInfo']:
-                                    for affiliation_name in affiliation_str['Affiliation'].split(';'):
-                                        ###
-                                        # 5) Create/Retrieve institution
-                                        ###
-                                        institution_name = curate_text(affiliation_name)
-                                        institution_country_obj = self.__get_institution_country(institution_name)
-                                        try:
-                                            institution_obj = Institution.objects.get(
-                                                name__iexact=institution_name,
-                                                country=institution_country_obj
-                                            )
-                                        except Institution.DoesNotExist:
-                                            institution_obj = Institution(name=institution_name,
-                                                                          country=institution_country_obj)
-                                            institution_obj.save()
-                                            self.objs_created['Institution'].append(institution_obj)
-                                        ###
-                                        # 6) Create/Retrieve author's affiliation
-                                        ###
-                                        affiliation_obj, created = Affiliation.objects.get_or_create(
-                                            scientist=author_obj,
-                                            institution=institution_obj
+                    Article.objects.get(doi=paper_doi)
+                except:
+                    paper_meta_data = paper['MedlineCitation']['Article']
+                    venue_meta_data = paper['MedlineCitation']['Article']['Journal']
+                    logging.info(f"Found the paper: {paper_meta_data['ArticleTitle']}")
+                    try:
+                        with transaction.atomic():
+                            ###
+                            # 1) Create/Retrieve paper's venue
+                            ###
+                            venue_obj = self.__create_update_venue(paper_meta_data, venue_meta_data)
+                            ###
+                            # 2) Create/Retrieve pubmed id
+                            ###
+                            id_dict = {
+                                'name': 'PubMed Id',
+                                'value': str(paper['MedlineCitation']['PMID']),
+                                'type': 'str'
+                            }
+                            pubmed_id_obj, created = CustomField.objects.get_or_create(**id_dict)
+                            if created: self.objs_created['CustomField'].append(pubmed_id_obj)
+                            ###
+                            # 3) Create/Retrieve paper
+                            ###
+                            article_obj = self.__create_update_article(paper, venue_obj, pubmed_id_obj)
+                            ###
+                            # Iterate over the paper's authors
+                            ###
+                            paper_authors = paper_meta_data['AuthorList']
+                            for index, author in enumerate(paper_authors):
+                                if 'ForeName' in author.keys():
+                                    ###
+                                    # 4) Create/Update author
+                                    ###
+                                    author_dict = {
+                                        'first_name': author['ForeName'],
+                                        'last_name': author['LastName']
+                                    }
+                                    try:
+                                        author_obj = Scientist.objects.get(
+                                            first_name__iexact=author_dict['first_name'],
+                                            last_name__iexact=author_dict['last_name']
                                         )
-                                        if created: self.objs_created['Institution'].append(affiliation_obj)
-                                        # Update affiliation metrics
-                                        affiliation_obj.articles += 1
-                                        if index == 0:
-                                            affiliation_obj.articles_as_first_author += 1
-                                        affiliation_obj.save()
-                                        ###
-                                        # 7) Create/Retrieve article's authorship
-                                        ###
-                                        authorship_dict = {
-                                            'author': author_obj,
-                                            'artifact': article_obj,
-                                            'institution': institution_obj,
-                                            'first_author': index == 0
-                                        }
-                                        authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
-                                        if created: self.objs_created['Authorship'].append(authorship_obj)
-                except IntegrityError as e:
-                    # Transaction failed, log the error and continue with the paper
-                    logging.error(e)
+                                    except Scientist.DoesNotExist:
+                                        full_name = author['ForeName'] + ' ' + author['LastName']
+                                        author_dict['gender'] = get_gender(full_name)
+                                        author_obj = Scientist(**author_dict)
+                                        author_obj.save()
+                                        self.objs_created['Scientist'].append(author_obj)
+                                    # Update scientists' publication metrics
+                                    author_obj.articles += 1
+                                    if index == 0:
+                                        author_obj.articles_as_first_author += 1
+                                    author_obj.save()
+                                    ###
+                                    # Iterate over author's affiliations
+                                    ###
+                                    for affiliation_str in author['AffiliationInfo']:
+                                        for affiliation_name in affiliation_str['Affiliation'].split(';'):
+                                            ###
+                                            # 5) Create/Retrieve institution
+                                            ###
+                                            institution_name = curate_text(affiliation_name)
+                                            institution_country_obj = self.__get_institution_country(institution_name)
+                                            try:
+                                                institution_obj = Institution.objects.get(
+                                                    name__iexact=institution_name,
+                                                    country=institution_country_obj
+                                                )
+                                            except Institution.DoesNotExist:
+                                                institution_obj = Institution(name=institution_name,
+                                                                              country=institution_country_obj)
+                                                institution_obj.save()
+                                                self.objs_created['Institution'].append(institution_obj)
+                                            ###
+                                            # 6) Create/Retrieve author's affiliation
+                                            ###
+                                            affiliation_obj, created = Affiliation.objects.get_or_create(
+                                                scientist=author_obj,
+                                                institution=institution_obj
+                                            )
+                                            if created: self.objs_created['Institution'].append(affiliation_obj)
+                                            # Update affiliation metrics
+                                            affiliation_obj.articles += 1
+                                            if index == 0:
+                                                affiliation_obj.articles_as_first_author += 1
+                                            affiliation_obj.save()
+                                            ###
+                                            # 7) Create/Retrieve article's authorship
+                                            ###
+                                            authorship_dict = {
+                                                'author': author_obj,
+                                                'artifact': article_obj,
+                                                'institution': institution_obj,
+                                                'first_author': index == 0
+                                            }
+                                            authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
+                                            if created: self.objs_created['Authorship'].append(authorship_obj)
+                    except IntegrityError as e:
+                        # Transaction failed, log the error and continue with the paper
+                        logging.error(e)
         self.__display_feedback_msg(request)
     get_articles.short_description = 'Get articles (PubMed)'
 
