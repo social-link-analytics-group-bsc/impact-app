@@ -13,6 +13,7 @@ import re
 
 logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
                     level=logging.DEBUG)
+logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 
 
 @admin.register(Country)
@@ -70,10 +71,13 @@ class ScientistAdmin(admin.ModelAdmin):
     def __get_paper_url(self, paper_doi):
         BASE_URL = 'https://doi.org/'
         paper_doi_url = BASE_URL + paper_doi
-        ret_rq = requests.get(paper_doi_url)
-        if ret_rq.status_code == 200:
-            return ret_rq.url
-        else:
+        try:
+            ret_rq = requests.get(paper_doi_url)
+            if ret_rq.status_code == 200:
+                return ret_rq.url
+            else:
+                return ''
+        except requests.ConnectionError:
             return ''
 
     def __get_paper_keywords(self, paper_meta_data):
@@ -119,7 +123,8 @@ class ScientistAdmin(admin.ModelAdmin):
         else:
             venue_dict['type'] = 'other'
         try:
-            venue_obj = Venue.objects.get(name=venue_dict['name'], type=venue_dict['type'])
+            venue_obj = Venue.objects.get(name__iexact=venue_dict['name'], type__exact=venue_dict['type'])
+            Venue.objects.filter(name__iexact=venue_dict['name'], type__exact=venue_dict['type']).update(**venue_dict)
         except Venue.DoesNotExist:
             venue_obj = Venue(**venue_dict)
             venue_obj.save()
@@ -129,11 +134,9 @@ class ScientistAdmin(admin.ModelAdmin):
     def __create_update_article(self, paper, venue_obj, id_obj):
         paper_meta_data = paper['MedlineCitation']['Article']
         paper_doi = self.__get_paper_doi(paper)
-        paper_url = self.__get_paper_url(paper_doi)
         paper_keywords = self.__get_paper_keywords(paper['MedlineCitation']['Article'])
         article_dict = {
             'title': curate_text(paper_meta_data['ArticleTitle']),
-            'url': paper_url,
             'doi': paper_doi,
             'academic_db': 'pubmed',
             'venue': venue_obj,
@@ -143,17 +146,21 @@ class ScientistAdmin(admin.ModelAdmin):
             article_dict['language'] = str(paper_meta_data.get('Language')[0])
         if paper_meta_data.get('ArticleDate') and paper_meta_data.get('ArticleDate')[0].get('Year'):
             article_dict['year'] = int(paper_meta_data.get('ArticleDate')[0].get('Year'))
-        elif paper['MedlineCitation']['DateCompleted']:
+        elif paper['MedlineCitation'].get('DateCompleted'):
             article_dict['year'] = int(paper['MedlineCitation']['DateCompleted']['Year'])
-        elif paper['MedlineCitation']['DateRevised']:
+        elif paper['MedlineCitation'].get('DateRevised'):
             article_dict['year'] = int(paper['MedlineCitation']['DateRevised']['Year'])
         else:
             raise Exception(f"Couldn't find the year of the article {article_dict['title']}")
         if paper_keywords:
             article_dict['keywords'] = paper_keywords
         try:
-            article_obj = Article.objects.get(doi=paper_doi)
+            article_obj = Article.objects.get(doi__exact=paper_doi)
+            Article.objects.filter(doi__exact=paper_doi).update(**article_dict)
         except Article.DoesNotExist:
+            # Getting the url is an expensive process because it requires to hit the doi page,
+            # we only compute if the article does not exist already
+            article_dict['url'] = self.__get_paper_url(paper_doi)
             article_obj = Article(**article_dict)
             article_obj.save()
             self.objs_created['Article'].append(article_obj)
@@ -199,14 +206,26 @@ class ScientistAdmin(admin.ModelAdmin):
                                 ###
                                 # 4) Create/Update author
                                 ###
-                                full_name = author['ForeName'] + ' ' + author['LastName']
                                 author_dict = {
                                     'first_name': author['ForeName'],
-                                    'last_name': author['LastName'],
-                                    'gender': get_gender(full_name)
+                                    'last_name': author['LastName']
                                 }
-                                author_obj, created = Scientist.objects.update_or_create(**author_dict)
-                                if created: self.objs_created['Scientist'].append(author_obj)
+                                try:
+                                    author_obj = Scientist.objects.get(
+                                        first_name__iexact=author_dict['first_name'],
+                                        last_name__iexact=author_dict['last_name']
+                                    )
+                                except Scientist.DoesNotExist:
+                                    full_name = author['ForeName'] + ' ' + author['LastName']
+                                    author_dict['gender'] = get_gender(full_name)
+                                    author_obj = Scientist(**author_dict)
+                                    author_obj.save()
+                                    self.objs_created['Scientist'].append(author_obj)
+                                # Update scientists' publication metrics
+                                author_obj.articles += 1
+                                if index == 0:
+                                    author_obj.articles_as_first_author += 1
+                                author_obj.save()
                                 ###
                                 # Iterate over author's affiliations
                                 ###
@@ -217,11 +236,16 @@ class ScientistAdmin(admin.ModelAdmin):
                                         ###
                                         institution_name = curate_text(affiliation_name)
                                         institution_country_obj = self.__get_institution_country(institution_name)
-                                        institution_obj, created = Institution.objects.update_or_create(
-                                            name=institution_name,
-                                            country=institution_country_obj
-                                        )
-                                        if created: self.objs_created['Institution'].append(institution_obj)
+                                        try:
+                                            institution_obj = Institution.objects.get(
+                                                name__iexact=institution_name,
+                                                country=institution_country_obj
+                                            )
+                                        except Institution.DoesNotExist:
+                                            institution_obj = Institution(name=institution_name,
+                                                                          country=institution_country_obj)
+                                            institution_obj.save()
+                                            self.objs_created['Institution'].append(institution_obj)
                                         ###
                                         # 6) Create/Retrieve author's affiliation
                                         ###
@@ -230,6 +254,11 @@ class ScientistAdmin(admin.ModelAdmin):
                                             institution=institution_obj
                                         )
                                         if created: self.objs_created['Institution'].append(affiliation_obj)
+                                        # Update affiliation metrics
+                                        affiliation_obj.articles += 1
+                                        if index == 0:
+                                            affiliation_obj.articles_as_first_author += 1
+                                        affiliation_obj.save()
                                         ###
                                         # 7) Create/Retrieve article's authorship
                                         ###
