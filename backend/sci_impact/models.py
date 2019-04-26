@@ -140,17 +140,18 @@ class Venue(models.Model):
 
 
 class Scientist(Person):
-    orcid = models.CharField(max_length=50, null=True, blank=True)
-    scopus_id = models.CharField(max_length=50, null=True, blank=True)
-    pmc_id = models.CharField(max_length=50, null=True, blank=True)
+    # scientist ids (orcid, scopus, pmc, etc)
+    scientist_ids = models.ForeignKey(CustomField, on_delete=models.CASCADE, null=True, blank=True)
     # production
-    scientific_publications_as_first_author = models.IntegerField(default=0)
-    scientific_publications_with_citations = models.IntegerField(default=0)
+    articles = models.IntegerField(default=0)
+    articles_as_first_author = models.IntegerField(default=0)
+    articles_with_citations = models.IntegerField(default=0)
     books = models.IntegerField(default=0)
     patents = models.IntegerField(default=0)
     datasets = models.IntegerField(default=0)
     tools = models.IntegerField(default=0)
     # citations
+    articles_citations = models.IntegerField(default=0)
     book_citations = models.IntegerField(default=0)
     dataset_citations = models.IntegerField(default=0)
     patent_citations = models.IntegerField(default=0)
