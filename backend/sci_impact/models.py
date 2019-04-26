@@ -121,7 +121,7 @@ class Venue(models.Model):
     name = models.CharField(max_length=300)
     type = models.CharField(max_length=100, choices=DATA_TYPE, default='journal')
     issn = models.CharField(max_length=10, null=True, blank=True)
-    volume = models.IntegerField(null=True, blank=True)
+    volume = models.CharField(max_length=100, null=True, blank=True)
     number = models.IntegerField(null=True, blank=True)
     issue = models.CharField(max_length=300, null=True, blank=True)
     year = models.IntegerField(null=True, blank=True)
