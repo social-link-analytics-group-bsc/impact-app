@@ -123,7 +123,7 @@ class Venue(models.Model):
     issn = models.CharField(max_length=10, null=True, blank=True)
     volume = models.IntegerField(null=True, blank=True)
     number = models.IntegerField(null=True, blank=True)
-    issue = models.IntegerField(null=True, blank=True)
+    issue = models.CharField(max_length=10, null=True, blank=True)
     year = models.IntegerField(null=True, blank=True)
     month = models.CharField(max_length=10, null=True, blank=True)
     day = models.IntegerField(null=True, blank=True)
