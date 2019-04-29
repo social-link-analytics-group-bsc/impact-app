@@ -24,12 +24,32 @@ class CountryAdmin(admin.ModelAdmin):
     search_fields = ('name',)
 
     def load_countries(self, request, queryset):
-        with open(str('sci_impact/data/country_list.txt'), 'r') as f:
-            for _, line in enumerate(f):
-                line = line.split(':')
-                country_name = line[1].replace('\n', '')
-                country_code = line[0].replace('\n', '')
-                Country.objects.get_or_create(name=country_name, iso_code=country_code)
+        api_country = 'https://restcountries.eu/rest/v2/all'
+        r = requests.get(api_country)
+        r.raise_for_status()  # make sure requests raises an error if it fails
+        countries = r.json()
+
+        for country in countries:
+            country_name = country['name']
+            alpha2_code = country['alpha2Code'].lower()
+            alpha3_code = country['alpha3Code'].lower()
+            country_iso_code = alpha3_code
+            alternative_names = set()
+            alternative_names.add(country['nativeName'])
+            if country.get('altSpellings'):
+                for alternative_name in country['altSpellings']:
+                    if alternative_name not in [alpha2_code, alpha3_code]:
+                        alternative_names.add(alternative_name)
+            if country.get('translations'):
+                translations_considered = ['en','es','br','de','it','fr','pt', 'nl', 'hr']
+                for translation, name in country['translations'].items():
+                    if translation in translations_considered:
+                        alternative_names.add(name)
+            list_alt_names = [alt_name for alt_name in alternative_names if alt_name]
+            alt_names_str = ', '.join(list_alt_names)
+            logging.info(f"Creating country: {country_name}")
+            Country.objects.update_or_create(name=country_name, iso_code=country_iso_code,
+                                             default={'alternative_names': alt_names_str})
     load_countries.short_description = 'Load list of countries'
 
 
@@ -50,6 +70,7 @@ class ScientistAdmin(admin.ModelAdmin):
     search_fields = ('first_name', 'last_name',)
     actions = ['get_articles']
     objs_created = defaultdict(list)
+    countries = set()
 
     def __display_feedback_msg(self, request):
         if self.objs_created:
@@ -101,6 +122,47 @@ class ScientistAdmin(admin.ModelAdmin):
             return found_countries[0]
         else:
             return None
+
+    def __which_country(self, aff_str):
+        for country in self.countries:
+            if aff_str.lower().strip() == country.lower():
+                return country
+        return ''
+
+    def __is_countryand_case(self, aff_str):
+        aff_str = aff_str.lower().strip()
+        for country in self.countries:
+            country_and_case = country.lower() + ' and '
+            if aff_str.find(country_and_case) == 0:
+                return country
+        return ''
+
+    def __get_affiliations(self, affiliation):
+        country_objs = Country.objects.all()
+        regex = re.compile('[,;]+')  # here we are assuming that affiliations are separated by comma or semi-colon
+        for country_obj in country_objs:
+            self.countries.add(country_obj.name.lower())
+            for alt_country in country_obj.alternative_names.split(','):
+                self.countries.add(alt_country.lower())
+        aff_array = regex.split(affiliation)
+        current_affiliation = []
+        affiliations = []
+        for aff in aff_array:
+            found_country = self.__which_country(aff)
+            if found_country:
+                current_affiliation.append(found_country)
+                affiliations.append(', '.join(current_affiliation))
+                current_affiliation = []
+            else:
+                found_country = self.__is_countryand_case(aff)
+                if found_country:
+                    current_affiliation.append(found_country)
+                    affiliations.append(', '.join(current_affiliation))
+                    aff = aff[len(found_country + ' and '):]  # remove country name + and
+                    current_affiliation = [aff.strip()]
+                else:
+                    current_affiliation.append(aff.strip())
+        return affiliations
 
     def __create_update_venue(self, paper_meta_data, venue_meta_data):
         venue_dict = {'name': str(venue_meta_data['Title'])}
@@ -172,7 +234,7 @@ class ScientistAdmin(admin.ModelAdmin):
                 paper_doi = self.__get_paper_doi(paper)
                 try:
                     Article.objects.get(doi=paper_doi)
-                except:
+                except Article.DoesNotExist:
                     paper_meta_data = paper['MedlineCitation']['Article']
                     venue_meta_data = paper['MedlineCitation']['Article']['Journal']
                     logging.info(f"Found the paper: {paper_meta_data['ArticleTitle']}")
@@ -229,7 +291,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                     # Iterate over author's affiliations
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
-                                        for affiliation_name in affiliation_str['Affiliation'].split(';'):
+                                        for affiliation_name in self.__get_affiliations(affiliation_str):
                                             ###
                                             # 5) Create/Retrieve institution
                                             ###
