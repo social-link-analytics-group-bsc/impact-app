@@ -77,7 +77,7 @@ class ScientistAdmin(admin.ModelAdmin):
         if self.objs_created:
             msg = 'The action was completed successfully!\n'
             for model, objs in self.objs_created.items():
-                msg += f"- It was created {model} objects of the type {len(objs)}\n"
+                msg += f"- It was created {len(objs)} objects of the type {model}\n"
             self.message_user(request, msg, level=messages.SUCCESS)
         else:
             msg = 'No objects were created'
@@ -331,7 +331,7 @@ class ScientistAdmin(admin.ModelAdmin):
                         # Transaction failed, log the error and continue with the paper
                         logging.error(e)
         self.__display_feedback_msg(request)
-    get_articles_pubmed.short_description = 'Get articles (PubMed)'
+    get_articles_pubmed.short_description = 'Get articles (Source: PubMed)'
 
 
 @admin.register(Institution)
