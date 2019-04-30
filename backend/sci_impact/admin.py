@@ -31,14 +31,15 @@ class CountryAdmin(admin.ModelAdmin):
 
         for country in countries:
             country_name = country['name']
-            alpha2_code = country['alpha2Code'].lower()
-            alpha3_code = country['alpha3Code'].lower()
-            country_iso_code = alpha3_code
+            alpha2_code = country['alpha2Code']
+            country_iso_code = country['alpha3Code']
             alternative_names = set()
             alternative_names.add(country['nativeName'])
             if country.get('altSpellings'):
                 for alternative_name in country['altSpellings']:
-                    if alternative_name not in [alpha2_code, alpha3_code]:
+                    if len(alternative_name) > 2:
+                        alternative_names.add(alternative_name)
+                    elif len(alternative_name) == 2 and alternative_name != alpha2_code:
                         alternative_names.add(alternative_name)
             if country.get('translations'):
                 translations_considered = ['en','es','br','de','it','fr','pt', 'nl', 'hr']
@@ -49,7 +50,7 @@ class CountryAdmin(admin.ModelAdmin):
             alt_names_str = ', '.join(list_alt_names)
             logging.info(f"Creating country: {country_name}")
             Country.objects.update_or_create(name=country_name, iso_code=country_iso_code,
-                                             default={'alternative_names': alt_names_str})
+                                             defaults={'alternative_names': alt_names_str})
     load_countries.short_description = 'Load list of countries'
 
 
@@ -68,9 +69,9 @@ class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'nationality')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['get_articles']
+    actions = ['get_articles_pubmed']
     objs_created = defaultdict(list)
-    countries = set()
+    countries = []
 
     def __display_feedback_msg(self, request):
         if self.objs_created:
@@ -88,6 +89,7 @@ class ScientistAdmin(admin.ModelAdmin):
             for other_id in paper['PubmedData']['ArticleIdList']:
                 if 'doi' in other_id.attributes.values():
                     return other_id.lower()
+        return ''
 
     def __get_paper_url(self, paper_doi):
         BASE_URL = 'https://doi.org/'
@@ -108,56 +110,45 @@ class ScientistAdmin(admin.ModelAdmin):
         else:
             return ''
 
-    def __get_institution_country(self, institution_name):
-        found_countries = []
-        countries = Country.objects.all()
-        for country in countries:
-            regex_country = re.compile(f", {country.name}$")
-            if regex_country.search(institution_name):
-                found_countries.append(country)
-        if found_countries:
-            if len(found_countries) > 1:
-                logging.warning(f"Found more than one country in the affiliation {', '.join(found_countries)}. "
-                                f"Returning the first one")
-            return found_countries[0]
-        else:
-            return None
-
     def __which_country(self, aff_str):
-        for country in self.countries:
-            if aff_str.lower().strip() == country.lower():
-                return country
+        for country_dict in self.countries:
+            for country in country_dict['names']:
+                if aff_str.lower().strip() == country.lower():
+                    return country, country_dict['iso_code']
         return ''
 
     def __is_countryand_case(self, aff_str):
         aff_str = aff_str.lower().strip()
-        for country in self.countries:
-            country_and_case = country.lower() + ' and '
-            if aff_str.find(country_and_case) == 0:
-                return country
+        for country_dict in self.countries:
+            for country in country_dict['names']:
+                country_and_case = country.lower() + ' and '
+                if aff_str.find(country_and_case) == 0:
+                    return country, country_dict['iso_code']
         return ''
 
     def __get_affiliations(self, affiliation):
+        affiliation = curate_text(affiliation)
         country_objs = Country.objects.all()
         regex = re.compile('[,;]+')  # here we are assuming that affiliations are separated by comma or semi-colon
         for country_obj in country_objs:
-            self.countries.add(country_obj.name.lower())
+            country_names = [country_obj.name]
             for alt_country in country_obj.alternative_names.split(','):
-                self.countries.add(alt_country.lower())
+                country_names.extend(alt_country)
+            self.countries.append({'names': country_names, 'iso_code': country_obj.iso_code})
         aff_array = regex.split(affiliation)
         current_affiliation = []
         affiliations = []
         for aff in aff_array:
             found_country = self.__which_country(aff)
             if found_country:
-                current_affiliation.append(found_country)
-                affiliations.append(', '.join(current_affiliation))
+                current_affiliation.append(found_country[0])
+                affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
                 current_affiliation = []
             else:
                 found_country = self.__is_countryand_case(aff)
                 if found_country:
-                    current_affiliation.append(found_country)
-                    affiliations.append(', '.join(current_affiliation))
+                    current_affiliation.append(found_country[0])
+                    affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
                     aff = aff[len(found_country + ' and '):]  # remove country name + and
                     current_affiliation = [aff.strip()]
                 else:
@@ -197,7 +188,7 @@ class ScientistAdmin(admin.ModelAdmin):
         paper_meta_data = paper['MedlineCitation']['Article']
         paper_doi = self.__get_paper_doi(paper)
         paper_keywords = self.__get_paper_keywords(paper['MedlineCitation']['Article'])
-        paper_url = self.__get_paper_url(paper_doi)
+        paper_url = self.__get_paper_url(paper_doi) if paper_doi else ''
         article_dict = {
             'title': curate_text(paper_meta_data['ArticleTitle']),
             'doi': paper_doi,
@@ -223,7 +214,7 @@ class ScientistAdmin(admin.ModelAdmin):
         self.objs_created['Article'].append(article_obj)
         return article_obj
 
-    def get_articles(self, request, queryset):
+    def get_articles_pubmed(self, request, queryset):
         ec = EntrezClient()
         for scientist_obj in queryset:
             scientist_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
@@ -232,8 +223,12 @@ class ScientistAdmin(admin.ModelAdmin):
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
                 paper_doi = self.__get_paper_doi(paper)
+                paper_pubmed_id = str(paper['MedlineCitation']['PMID'])
                 try:
-                    Article.objects.get(doi=paper_doi)
+                    if paper_doi:
+                        Article.objects.get(doi=paper_doi)
+                    else:
+                        Article.objects.get(repo_ids__value=paper_pubmed_id)
                 except Article.DoesNotExist:
                     paper_meta_data = paper['MedlineCitation']['Article']
                     venue_meta_data = paper['MedlineCitation']['Article']['Journal']
@@ -249,7 +244,7 @@ class ScientistAdmin(admin.ModelAdmin):
                             ###
                             id_dict = {
                                 'name': 'PubMed Id',
-                                'value': str(paper['MedlineCitation']['PMID']),
+                                'value': paper_pubmed_id,
                                 'type': 'str'
                             }
                             pubmed_id_obj, created = CustomField.objects.get_or_create(**id_dict)
@@ -291,12 +286,13 @@ class ScientistAdmin(admin.ModelAdmin):
                                     # Iterate over author's affiliations
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
-                                        for affiliation_name in self.__get_affiliations(affiliation_str):
+                                        for institution in self.__get_affiliations(affiliation_str['Affiliation']):
                                             ###
                                             # 5) Create/Retrieve institution
                                             ###
-                                            institution_name = curate_text(affiliation_name)
-                                            institution_country_obj = self.__get_institution_country(institution_name)
+                                            institution_name = institution['name']
+                                            institution_country_obj = Country.objects.get(
+                                                iso_code=institution['country_iso_code'])
                                             try:
                                                 institution_obj = Institution.objects.get(
                                                     name__iexact=institution_name,
@@ -335,7 +331,7 @@ class ScientistAdmin(admin.ModelAdmin):
                         # Transaction failed, log the error and continue with the paper
                         logging.error(e)
         self.__display_feedback_msg(request)
-    get_articles.short_description = 'Get articles (PubMed)'
+    get_articles_pubmed.short_description = 'Get articles (PubMed)'
 
 
 @admin.register(Institution)
@@ -346,3 +342,10 @@ class InstitutionAdmin(admin.ModelAdmin):
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
+
+
+@admin.register(Article)
+class ArticleAdmin(admin.ModelAdmin):
+    list_display = ('title', 'year', 'doi', 'url')
+    ordering = ('year', 'title')
+    search_fields = ('title', 'doi', 'year')
