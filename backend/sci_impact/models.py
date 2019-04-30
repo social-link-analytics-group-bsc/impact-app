@@ -146,6 +146,7 @@ class Scientist(Person):
     # production
     articles = models.IntegerField(default=0)
     articles_as_first_author = models.IntegerField(default=0)
+    articles_as_last_author = models.IntegerField(default=0)
     articles_with_citations = models.IntegerField(default=0)
     books = models.IntegerField(default=0)
     patents = models.IntegerField(default=0)
@@ -236,6 +237,7 @@ class Authorship(models.Model):
     artifact = models.ForeignKey(Artifact, on_delete=models.CASCADE)
     institution = models.ForeignKey('Institution', on_delete=models.CASCADE, null=True, blank=True)
     first_author = models.BooleanField(default=False)
+    last_author = models.BooleanField(default=False)
     corresponding_author = models.BooleanField(default=False)
 
 
