@@ -54,14 +54,14 @@ class CountryAdmin(admin.ModelAdmin):
     load_countries.short_description = 'Load list of countries'
 
 
-@admin.register(Region)
-class RegionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'country')
+#@admin.register(Region)
+#class RegionAdmin(admin.ModelAdmin):
+#    list_display = ('name', 'country')
 
 
-@admin.register(City)
-class CityAdmin(admin.ModelAdmin):
-    list_display = ('name', 'region', 'country', 'wikipage')
+#@admin.register(City)
+#class CityAdmin(admin.ModelAdmin):
+#    list_display = ('name', 'region', 'country', 'wikipage')
 
 
 @admin.register(Scientist)
@@ -214,6 +214,18 @@ class ScientistAdmin(admin.ModelAdmin):
         self.objs_created['Article'].append(article_obj)
         return article_obj
 
+    def __create_update_authorship(self, author_obj, author_index, total_authors, article_obj, institution_obj=None):
+        authorship_dict = {
+            'author': author_obj,
+            'artifact': article_obj,
+            'first_author': author_index == 0,
+            'last_author': author_index == (total_authors-1)
+        }
+        if institution_obj:
+            authorship_dict['institution'] =    institution_obj
+        authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
+        if created: self.objs_created['Authorship'].append(authorship_obj)
+
     def get_articles_pubmed(self, request, queryset):
         ec = EntrezClient()
         for scientist_obj in queryset:
@@ -222,6 +234,8 @@ class ScientistAdmin(admin.ModelAdmin):
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
+                paper_meta_data = paper['MedlineCitation']['Article']
+                logging.info(f"[{i}] Processing paper {paper_meta_data['ArticleTitle']}")
                 paper_doi = self.__get_paper_doi(paper)
                 paper_pubmed_id = str(paper['MedlineCitation']['PMID'])
                 try:
@@ -229,10 +243,9 @@ class ScientistAdmin(admin.ModelAdmin):
                         Article.objects.get(doi=paper_doi)
                     else:
                         Article.objects.get(repo_ids__value=paper_pubmed_id)
+                    logging.info(f"Paper already in the database!")
                 except Article.DoesNotExist:
-                    paper_meta_data = paper['MedlineCitation']['Article']
                     venue_meta_data = paper['MedlineCitation']['Article']['Journal']
-                    logging.info(f"Found the paper: {paper_meta_data['ArticleTitle']}")
                     try:
                         with transaction.atomic():
                             ###
@@ -257,6 +270,7 @@ class ScientistAdmin(admin.ModelAdmin):
                             # Iterate over the paper's authors
                             ###
                             paper_authors = paper_meta_data['AuthorList']
+                            total_authors = len(paper_authors)
                             for index, author in enumerate(paper_authors):
                                 if 'ForeName' in author.keys():
                                     ###
@@ -281,12 +295,28 @@ class ScientistAdmin(admin.ModelAdmin):
                                     author_obj.articles += 1
                                     if index == 0:
                                         author_obj.articles_as_first_author += 1
+                                    if index == (total_authors-1):
+                                        author_obj.articles_as_last_author += 1
                                     author_obj.save()
                                     ###
                                     # Iterate over author's affiliations
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
-                                        for institution in self.__get_affiliations(affiliation_str['Affiliation']):
+                                        if affiliation_str['Affiliation']:
+                                            affiliations = affiliation_str['Affiliation'].split(';')
+                                            if len(affiliations) == 1:
+                                                # affiliations are not separated by semi-colon
+                                                affiliations = self.__get_affiliations(affiliation_str['Affiliation'])
+                                                if len(affiliations) == 0:
+                                                    # the author does not have affiliations, let's create their
+                                                    # authorship anyways
+                                                    self.__create_update_authorship(author_obj, index, total_authors,
+                                                                                    article_obj)
+                                        else:
+                                            # affiliation does not exists, let's create the authorship anyways
+                                            self.__create_update_authorship(author_obj, index, total_authors,
+                                                                            article_obj)
+                                        for institution in affiliations:
                                             ###
                                             # 5) Create/Retrieve institution
                                             ###
@@ -319,14 +349,8 @@ class ScientistAdmin(admin.ModelAdmin):
                                             ###
                                             # 7) Create/Retrieve article's authorship
                                             ###
-                                            authorship_dict = {
-                                                'author': author_obj,
-                                                'artifact': article_obj,
-                                                'institution': institution_obj,
-                                                'first_author': index == 0
-                                            }
-                                            authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
-                                            if created: self.objs_created['Authorship'].append(authorship_obj)
+                                            self.__create_update_authorship(author_obj, index, total_authors,
+                                                                            article_obj, institution_obj)
                     except IntegrityError as e:
                         # Transaction failed, log the error and continue with the paper
                         logging.error(e)
@@ -346,6 +370,10 @@ class AffiliationAdmin(admin.ModelAdmin):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'year', 'doi', 'url')
+    list_display = ('title', 'year', 'doi', 'authors', 'url')
     ordering = ('year', 'title')
     search_fields = ('title', 'doi', 'year')
+
+    def authors(self, obj):
+        pass
+        #obj.
