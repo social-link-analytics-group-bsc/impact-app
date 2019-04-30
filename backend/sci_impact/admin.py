@@ -303,19 +303,18 @@ class ScientistAdmin(admin.ModelAdmin):
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
                                         if affiliation_str['Affiliation']:
-                                            affiliations = affiliation_str['Affiliation'].split(';')
-                                            if len(affiliations) == 1:
-                                                # affiliations are not separated by semi-colon
-                                                affiliations = self.__get_affiliations(affiliation_str['Affiliation'])
-                                                if len(affiliations) == 0:
-                                                    # the author does not have affiliations, let's create their
-                                                    # authorship anyways
-                                                    self.__create_update_authorship(author_obj, index, total_authors,
-                                                                                    article_obj)
+                                            affiliations = self.__get_affiliations(affiliation_str['Affiliation'])
+                                            if len(affiliations) == 0:
+                                                # the author does not have affiliations, let's create their
+                                                # authorship anyways
+                                                self.__create_update_authorship(author_obj, index, total_authors,
+                                                                                article_obj)
+                                                continue
                                         else:
                                             # affiliation does not exists, let's create the authorship anyways
                                             self.__create_update_authorship(author_obj, index, total_authors,
                                                                             article_obj)
+                                            continue
                                         for institution in affiliations:
                                             ###
                                             # 5) Create/Retrieve institution
