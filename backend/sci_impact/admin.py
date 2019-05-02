@@ -77,10 +77,11 @@ class ScientistAdmin(admin.ModelAdmin):
     def __load_countries(self):
         country_objs = Country.objects.all()
         for country_obj in country_objs:
-            country_names = [country_obj.name]
+            country_names = set()
+            country_names.add(country_obj.name)
             for alt_country in country_obj.alternative_names.split(','):
-                country_names.extend(alt_country)
-            self.countries.append({'names': country_names, 'iso_code': country_obj.iso_code})
+                country_names.add(alt_country)
+            self.countries.append({'names': list(country_names), 'iso_code': country_obj.iso_code})
 
     def __display_feedback_msg(self, request):
         if self.objs_created:
@@ -109,7 +110,7 @@ class ScientistAdmin(admin.ModelAdmin):
                 return ret_rq.url
             else:
                 return ''
-        except requests.ConnectionError:
+        except Exception:
             return ''
 
     def __get_paper_keywords(self, paper_meta_data):
@@ -145,33 +146,26 @@ class ScientistAdmin(admin.ModelAdmin):
 
     def __get_affiliations(self, affiliation):
         affiliations = []
+        current_affiliation = []
         if not self.countries:
             self.__load_countries()
-        affiliations_array = affiliation.split(';')
-        if len(affiliations_array) > 1:
-            for current_affiliation in affiliations_array:
-                current_affiliation = curate_text(current_affiliation)
-                country_iso_code = self.__get_country_iso_code(current_affiliation)
-                affiliations.append({'name': current_affiliation, 'country_iso_code': country_iso_code})
-        else:
-            affiliation = curate_text(affiliation)
-            aff_array = self.regex.split(affiliation)
-            current_affiliation = []
-            for aff in aff_array:
-                found_country = self.__which_country(aff)
+        affiliation = curate_text(affiliation)
+        aff_array = self.regex.split(affiliation)
+        for aff in aff_array:
+            found_country = self.__which_country(aff)
+            if found_country:
+                current_affiliation.append(found_country[0])
+                affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
+                current_affiliation = []
+            else:
+                found_country = self.__is_countryand_case(aff)
                 if found_country:
                     current_affiliation.append(found_country[0])
                     affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
-                    current_affiliation = []
+                    aff = aff[len(found_country + ' and '):]  # remove country name + and
+                    current_affiliation = [aff.strip()]
                 else:
-                    found_country = self.__is_countryand_case(aff)
-                    if found_country:
-                        current_affiliation.append(found_country[0])
-                        affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
-                        aff = aff[len(found_country + ' and '):]  # remove country name + and
-                        current_affiliation = [aff.strip()]
-                    else:
-                        current_affiliation.append(aff.strip())
+                    current_affiliation.append(aff.strip())
         return affiliations
 
     def __create_update_venue(self, paper_meta_data, venue_meta_data):
@@ -241,9 +235,15 @@ class ScientistAdmin(admin.ModelAdmin):
             'last_author': author_index == (total_authors-1)
         }
         if institution_obj:
-            authorship_dict['institution'] =    institution_obj
-        authorship_obj, created = Authorship.objects.get_or_create(**authorship_dict)
-        if created: self.objs_created['Authorship'].append(authorship_obj)
+            authorship_dict['institution'] = institution_obj
+        try:
+            Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
+            Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj)\
+                .update(**authorship_dict)
+        except Authorship.DoesNotExist:
+            authorship_obj = Authorship(**authorship_dict)
+            authorship_obj.save()
+            self.objs_created['Authorship'].append(authorship_obj)
 
     def get_articles_pubmed(self, request, queryset):
         ec = EntrezClient()
