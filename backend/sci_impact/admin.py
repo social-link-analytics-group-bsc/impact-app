@@ -72,6 +72,15 @@ class ScientistAdmin(admin.ModelAdmin):
     actions = ['get_articles_pubmed']
     objs_created = defaultdict(list)
     countries = []
+    regex = re.compile('[,;]+')
+
+    def __load_countries(self):
+        country_objs = Country.objects.all()
+        for country_obj in country_objs:
+            country_names = [country_obj.name]
+            for alt_country in country_obj.alternative_names.split(','):
+                country_names.extend(alt_country)
+            self.countries.append({'names': country_names, 'iso_code': country_obj.iso_code})
 
     def __display_feedback_msg(self, request):
         if self.objs_created:
@@ -126,33 +135,43 @@ class ScientistAdmin(admin.ModelAdmin):
                     return country, country_dict['iso_code']
         return ''
 
+    def __get_country_iso_code(self, institution_name):
+        for country_dict in self.countries:
+            for country in country_dict['names']:
+                regex_country = re.compile(f", {country}$")
+                if regex_country.search(institution_name):
+                    return country_dict['iso_code']
+        return ''
+
     def __get_affiliations(self, affiliation):
-        affiliation = curate_text(affiliation)
-        country_objs = Country.objects.all()
-        regex = re.compile('[,;]+')  # here we are assuming that affiliations are separated by comma or semi-colon
-        for country_obj in country_objs:
-            country_names = [country_obj.name]
-            for alt_country in country_obj.alternative_names.split(','):
-                country_names.extend(alt_country)
-            self.countries.append({'names': country_names, 'iso_code': country_obj.iso_code})
-        aff_array = regex.split(affiliation)
-        current_affiliation = []
         affiliations = []
-        for aff in aff_array:
-            found_country = self.__which_country(aff)
-            if found_country:
-                current_affiliation.append(found_country[0])
-                affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
-                current_affiliation = []
-            else:
-                found_country = self.__is_countryand_case(aff)
+        if not self.countries:
+            self.__load_countries()
+        affiliations_array = affiliation.split(';')
+        if len(affiliations_array) > 1:
+            for current_affiliation in affiliations_array:
+                current_affiliation = curate_text(current_affiliation)
+                country_iso_code = self.__get_country_iso_code(current_affiliation)
+                affiliations.append({'name': current_affiliation, 'country_iso_code': country_iso_code})
+        else:
+            affiliation = curate_text(affiliation)
+            aff_array = self.regex.split(affiliation)
+            current_affiliation = []
+            for aff in aff_array:
+                found_country = self.__which_country(aff)
                 if found_country:
                     current_affiliation.append(found_country[0])
                     affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
-                    aff = aff[len(found_country + ' and '):]  # remove country name + and
-                    current_affiliation = [aff.strip()]
+                    current_affiliation = []
                 else:
-                    current_affiliation.append(aff.strip())
+                    found_country = self.__is_countryand_case(aff)
+                    if found_country:
+                        current_affiliation.append(found_country[0])
+                        affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
+                        aff = aff[len(found_country + ' and '):]  # remove country name + and
+                        current_affiliation = [aff.strip()]
+                    else:
+                        current_affiliation.append(aff.strip())
         return affiliations
 
     def __create_update_venue(self, paper_meta_data, venue_meta_data):
