@@ -242,7 +242,7 @@ class Authorship(models.Model):
 
 
 class Institution(models.Model):
-    name = models.CharField(max_length=500)
+    name = models.TextField()
     country = models.ForeignKey(Country, null=True, blank=True, on_delete=models.CASCADE)
     region = models.ForeignKey(Region, null=True, blank=True, on_delete=models.CASCADE)
     city = models.ForeignKey(City, null=True, blank=True, on_delete=models.CASCADE)
