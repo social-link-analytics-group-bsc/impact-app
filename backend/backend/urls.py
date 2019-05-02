@@ -18,13 +18,16 @@ from django.contrib import admin
 from django.urls import re_path
 from django.conf.urls import include
 from rest_framework_swagger.views import get_swagger_view
+from sci_impact.views import index
 
 schema_view = get_swagger_view(title='Impact App API')
 
 urlpatterns = [
     # root endpoint
+    #re_path(r'', index),
+    # api root endpoint
     re_path(r'^api/$', schema_view),
-    # sci_impact endpoints
+    # sci_impact api endpoints
     re_path(r'^api/sci_impact/', include('sci_impact.urls')),
     # admin view
     re_path(r'^admin/', admin.site.urls),

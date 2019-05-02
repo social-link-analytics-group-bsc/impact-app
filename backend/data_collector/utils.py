@@ -38,12 +38,14 @@ def curate_text(raw_text):
     clean_text = regex_l.sub('', raw_text)
     clean_text = regex_t.sub('', clean_text)
     clean_text = clean_text.replace(' and ', ' ')
-    clean_text = clean_text.strip()
     clean_text = clean_text.rstrip(',')
     clean_text = clean_text.lstrip(',')
     clean_text = clean_text.rstrip('\t')
     clean_text = clean_text.lstrip('\t')
     clean_text = clean_text.rstrip('.')
+    clean_text = clean_text.strip()
+    # remove the character Hangul Choseong Filler, which is presence in some text
+    clean_text = clean_text.strip(u'\u115f')
     # remove duplicate whitespaces and newline characters
     clean_text = ' '.join(clean_text.split())
     return clean_text
