@@ -1,11 +1,12 @@
 from collections import defaultdict
 from data_collector.pubmed import EntrezClient
 from data_collector.utils import get_gender, curate_text
+from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import IntegrityError, transaction
-from sci_impact.models import Scientist, Country, Institution, City, Region, Affiliation, Venue, Article, Authorship, \
-                              CustomField
+from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField
 
+import csv
 import logging
 import pathlib
 import requests
@@ -52,16 +53,6 @@ class CountryAdmin(admin.ModelAdmin):
             Country.objects.update_or_create(name=country_name, iso_code=country_iso_code,
                                              defaults={'alternative_names': alt_names_str})
     load_countries.short_description = 'Load list of countries'
-
-
-#@admin.register(Region)
-#class RegionAdmin(admin.ModelAdmin):
-#    list_display = ('name', 'country')
-
-
-#@admin.register(City)
-#class CityAdmin(admin.ModelAdmin):
-#    list_display = ('name', 'region', 'country', 'wikipage')
 
 
 @admin.register(Scientist)
@@ -378,20 +369,53 @@ class ScientistAdmin(admin.ModelAdmin):
 
 @admin.register(Institution)
 class InstitutionAdmin(admin.ModelAdmin):
-    list_display = ('name', 'country', 'city', 'web_page')
-
+    list_display = ('name', 'country')
+    ordering = ('name', 'country')
+    search_fields = ('name', 'country__name')
 
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
 
 
+class YearFilter(MultipleChoiceListFilter):
+    title = 'Year'
+    parameter_name = 'year__in'
+
+    def lookups(self, request, model_admin):
+        year_objs =  Article.objects.values('year').distinct().order_by('year')
+        years = []
+        for year_obj in year_objs:
+            years.append((year_obj['year'], str(year_obj['year'])))
+        return tuple(years)
+
+
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
     list_display = ('title', 'year', 'doi', 'authors', 'url')
     ordering = ('year', 'title')
-    search_fields = ('title', 'doi', 'year')
+    search_fields = ('title', 'doi')
+    list_filter = (YearFilter,)
+    actions = ['export_articles_to_csv']
 
     def authors(self, obj):
         pass
         #obj.
+
+    def export_articles_to_csv(self, request, queryset):
+        filename = 'articles.csv'
+        logging.info(f"Exporting {len(queryset)} articles")
+        with open('articles.csv', 'w', encoding='utf-8') as f:
+            headers = ['title', 'year', 'doi']
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            for article_obj in queryset:
+                article_dict = {
+                    'title': article_obj.title,
+                    'year': article_obj.year,
+                    'doi': article_obj.doi
+                }
+                writer.writerow(article_dict)
+        msg = f"The information of {len(queryset)} articles were successfully exported to the file {filename}"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    export_articles_to_csv.short_description = 'Export articles information'
