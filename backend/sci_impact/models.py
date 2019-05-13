@@ -162,6 +162,8 @@ class Scientist(Person):
     # productivity measure
     h_index = models.IntegerField(default=0)
     i10_index = models.IntegerField(default=0)
+    # to treat duplicate records
+    is_duplicate = models.BooleanField(default=False)
 
     def __unicode__(self):
         return f"{self.first_name} {self.last_name}"
