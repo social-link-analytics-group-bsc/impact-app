@@ -228,8 +228,9 @@ class ScientistAdmin(admin.ModelAdmin):
         if institution_obj:
             authorship_dict['institution'] = institution_obj
         try:
-            Authorship.objects.get(author=author_obj, artifact=article_obj)
-            Authorship.objects.filter(author=author_obj, artifact=article_obj).update(**authorship_dict)
+            Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
+            Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj).\
+                update(**authorship_dict)
         except Authorship.DoesNotExist:
             authorship_obj = Authorship(**authorship_dict)
             authorship_obj.save()
@@ -394,16 +395,20 @@ class ArticleAdmin(admin.ModelAdmin):
     list_display = ('title', 'year', 'doi', 'authors', 'url')
     ordering = ('year', 'title')
     search_fields = ('title', 'doi')
-    list_filter = (YearFilter,)
+    list_filter = (YearFilter, )
     actions = ['export_articles_to_csv']
 
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
         authors = []
+        author_ids = []
         for authorship in authorships:
-            author_name = authorship.author.first_name + ' ' + authorship.author.last_name
-            authors.append(author_name)
-        return ', '.join(authors)
+            author = authorship.author
+            author_name = author.first_name + ' ' + author.last_name
+            if author.id not in author_ids:
+                author_ids.append(author.id)
+                authors.append(author_name)
+        return ', '.join(list(authors))
 
     def export_articles_to_csv(self, request, queryset):
         filename = 'articles.csv'
