@@ -290,7 +290,6 @@ class Affiliation(models.Model):
 class CollaborationNet(models.Model):
     scientist_A = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_A')
     scientist_B = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_B')
-    article = models.ForeignKey(Article, on_delete=models.CASCADE)
     num_collaborations = models.IntegerField(default=1)
 
 # class Citation(models.Model):
