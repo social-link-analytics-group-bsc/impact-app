@@ -228,13 +228,8 @@ class ScientistAdmin(admin.ModelAdmin):
         if institution_obj:
             authorship_dict['institution'] = institution_obj
         try:
-            if institution_obj:
-                Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
-                Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj)\
-                .update(**authorship_dict)
-            else:
-                Authorship.objects.get(author=author_obj, artifact=article_obj)
-                Authorship.objects.filter(author=author_obj, artifact=article_obj).update(**authorship_dict)
+            Authorship.objects.get(author=author_obj, artifact=article_obj)
+            Authorship.objects.filter(author=author_obj, artifact=article_obj).update(**authorship_dict)
         except Authorship.DoesNotExist:
             authorship_obj = Authorship(**authorship_dict)
             authorship_obj.save()
@@ -403,8 +398,12 @@ class ArticleAdmin(admin.ModelAdmin):
     actions = ['export_articles_to_csv']
 
     def authors(self, obj):
-        pass
-        #obj.
+        authorships = Authorship.objects.filter(artifact=obj)
+        authors = []
+        for authorship in authorships:
+            author_name = authorship.author.first_name + ' ' + authorship.author.last_name
+            authors.append(author_name)
+        return ', '.join(authors)
 
     def export_articles_to_csv(self, request, queryset):
         filename = 'articles.csv'
