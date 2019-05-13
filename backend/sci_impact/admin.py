@@ -228,9 +228,13 @@ class ScientistAdmin(admin.ModelAdmin):
         if institution_obj:
             authorship_dict['institution'] = institution_obj
         try:
-            Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
-            Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj)\
+            if institution_obj:
+                Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
+                Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj)\
                 .update(**authorship_dict)
+            else:
+                Authorship.objects.get(author=author_obj, artifact=article_obj)
+                Authorship.objects.filter(author=author_obj, artifact=article_obj).update(**authorship_dict)
         except Authorship.DoesNotExist:
             authorship_obj = Authorship(**authorship_dict)
             authorship_obj.save()
