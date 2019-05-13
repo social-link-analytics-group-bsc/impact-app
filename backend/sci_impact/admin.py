@@ -57,10 +57,10 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender', 'nationality')
+    list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['get_articles_pubmed']
+    actions = ['get_articles_pubmed', 'remove_duplicates', 'mark_as_duplicate']
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -365,6 +365,58 @@ class ScientistAdmin(admin.ModelAdmin):
                         logging.error(e)
         self.__display_feedback_msg(request)
     get_articles_pubmed.short_description = 'Get articles (Source: PubMed)'
+
+    def remove_duplicates(self, request, queryset):
+        duplicate_scientists = []
+        scientist_to_keep = None
+        for scientist_obj in queryset:
+            if scientist_obj.is_duplicate:
+                duplicate_scientists.append(scientist_obj)
+            else:
+                scientist_to_keep = scientist_obj
+        for duplicate_scientist in duplicate_scientists:
+            # 1) update scientist metrics
+            scientist_to_keep.articles += duplicate_scientist.articles
+            scientist_to_keep.articles_as_first_author += duplicate_scientist.articles_as_first_author
+            scientist_to_keep.articles_as_last_author += duplicate_scientist.articles_as_last_author
+            scientist_to_keep.articles_with_citations += duplicate_scientist.articles_with_citations
+            scientist_to_keep.articles_citations += duplicate_scientist.articles_citations
+            scientist_to_keep.books += duplicate_scientist.books
+            scientist_to_keep.patents += duplicate_scientist.patents
+            scientist_to_keep.datasets += duplicate_scientist.datasets
+            scientist_to_keep.tools += duplicate_scientist.tools
+            scientist_to_keep.book_citations += duplicate_scientist.book_citations
+            scientist_to_keep.dataset_citations += duplicate_scientist.dataset_citations
+            scientist_to_keep.patent_citations += duplicate_scientist.patent_citations
+            scientist_to_keep.tools_citations += duplicate_scientist.tools_citations
+            scientist_to_keep.total_citations += duplicate_scientist.total_citations
+            scientist_to_keep.save()
+            # 2) update authorship
+            authorships = Authorship.objects.filter(author=duplicate_scientist)
+            for authorship in authorships:
+                authorship.author = scientist_to_keep
+                authorship.save()
+            # 3) update affiliation
+            affiliations = Affiliation.objects.filter(scientist=duplicate_scientist)
+            for affiliation in affiliations:
+                affiliation.scientist = scientist_to_keep
+                affiliation.save()
+            # 4) remove duplicate
+            Scientist.objects.get(id=duplicate_scientist.id).delete()
+        msg = f"Duplicates were successfully removed"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    remove_duplicates.short_description = 'Remove duplicates'
+
+    def mark_as_duplicate(self, request, queryset):
+        for scientist_obj in queryset:
+            scientist_obj.is_duplicate = True
+            scientist_obj.save()
+        msg = f"{len(queryset)} records were marked as duplicates"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    mark_as_duplicate.short_description = 'Mark as duplicate'
+
+    def compute_coauthors_network(self, request, queryset):
+        ONLY_INB = True
 
 
 @admin.register(Institution)
