@@ -162,8 +162,9 @@ class Scientist(Person):
     # productivity measure
     h_index = models.IntegerField(default=0)
     i10_index = models.IntegerField(default=0)
-    # to treat duplicate records
+    # additional fields
     is_duplicate = models.BooleanField(default=False)
+    is_pi_inb = models.BooleanField(default=False)
 
     def __unicode__(self):
         return f"{self.first_name} {self.last_name}"
@@ -285,6 +286,12 @@ class Affiliation(models.Model):
     def __str__(self):
         return f"{self.scientist.last_name}, {self.scientist.first_name}, {self.institution.name}"
 
+
+class CollaborationNet(models.Model):
+    scientist_A = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_A')
+    scientist_B = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_B')
+    article = models.ForeignKey(Article, on_delete=models.CASCADE)
+    num_collaborations = models.IntegerField(default=1)
 
 # class Citation(models.Model):
 #     title = models.CharField(max_length=100, null=True, blank=True)
