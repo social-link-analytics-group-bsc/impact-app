@@ -1,5 +1,5 @@
 from django.db import models
-
+from django.utils import timezone
 
 # Constants
 
@@ -44,6 +44,10 @@ DATA_TYPE = (
     ('dict', 'Dictionary'),
 )
 
+NET_TYPE = (
+    ('directed', 'Directed'),
+    ('undirected', 'Undirected'),
+)
 
 class Artifact(models.Model):
     title = models.CharField(max_length=300)
@@ -287,10 +291,31 @@ class Affiliation(models.Model):
         return f"{self.scientist.last_name}, {self.scientist.first_name}, {self.institution.name}"
 
 
-class CollaborationNet(models.Model):
-    scientist_A = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_A')
-    scientist_B = models.ForeignKey(Scientist, on_delete=models.CASCADE, related_name='scientist_B')
-    num_collaborations = models.IntegerField(default=1)
+class Network(models.Model):
+    name = models.CharField(max_length=200)
+    date = models.DateTimeField(default=timezone.now)
+    type = models.CharField(max_length=50, choices=NET_TYPE, default='undirected')
+
+    def __unicode__(self):
+        return f"{self.name}"
+
+    def __str__(self):
+        return f"{self.name}"
+
+
+class NetworkNode(models.Model):
+    name = models.CharField(max_length=500)
+    network = models.ForeignKey(Network, on_delete=models.CASCADE)
+    attrs = models.ManyToManyField(CustomField, blank=True)
+
+
+class NetworkEdge(models.Model):
+    node_a = models.ForeignKey(NetworkNode, on_delete=models.CASCADE, related_name='node_a')
+    node_b = models.ForeignKey(NetworkNode, on_delete=models.CASCADE, related_name='node_b')
+    network = models.ForeignKey(Network, on_delete=models.CASCADE)
+    attrs = models.ManyToManyField(CustomField, blank=True)
+
+
 
 # class Citation(models.Model):
 #     title = models.CharField(max_length=100, null=True, blank=True)
