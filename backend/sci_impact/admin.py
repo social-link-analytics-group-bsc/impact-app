@@ -1,11 +1,12 @@
 from collections import defaultdict
 from data_collector.pubmed import EntrezClient
 from data_collector.utils import get_gender, curate_text
+from datetime import datetime
 from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import IntegrityError, transaction
-from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField
-
+from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField, \
+                              Network, NetworkNode, NetworkEdge
 import csv
 import logging
 import pathlib
@@ -60,7 +61,8 @@ class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['get_articles_pubmed', 'remove_duplicates', 'mark_as_duplicate']
+    actions = ['compute_coauthors_network', 'get_articles_pubmed', 'mark_as_duplicate', 'remove_duplicates']
+    list_filter = ('is_pi_inb',)
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -415,8 +417,92 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_as_duplicate.short_description = 'Mark as duplicate'
 
+    def __update_number_collaborations(self, edge_obj):
+        edge_attrs = edge_obj.attrs.all()
+        for edge_attr in edge_attrs:
+            if edge_attr.name == 'num_collaborations':
+                if edge_attr.type == 'int':
+                    cast_value = int(edge_attr.value)
+                    cast_value += 1
+                    edge_attr.value = str(cast_value)
+                    edge_attr.save()
+                break
+        edge_obj.save()
+
+    def __create_update_collaboration_edge(self, node_a_obj, node_b_obj, network_obj):
+        try:
+            edge_obj = NetworkEdge.objects.get(node_a=node_a_obj, node_b=node_b_obj, network=network_obj)
+            self.__update_number_collaborations(edge_obj)
+        except NetworkEdge.DoesNotExist:
+            try:
+                edge_obj = NetworkEdge.objects.get(node_a=node_b_obj, node_b=node_a_obj, network=network_obj)
+                self.__update_number_collaborations(edge_obj)
+            except NetworkEdge.DoesNotExist:
+                edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=network_obj)
+                edge.save()
+                num_collaborations_attr = CustomField(name='num_collaborations', value=1)
+                num_collaborations_attr.save()
+                edge.attrs.add(num_collaborations_attr)
+
+    def __create_update_scientist_node(self, scientist_obj, network_obj):
+        scientist_full_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
+        try:
+            node_obj = NetworkNode.objects.get(name=scientist_full_name, network=network_obj)
+        except NetworkNode.DoesNotExist:
+            num_articles_attr = CustomField(name='articles', value=scientist_obj.articles)
+            num_articles_attr.save()
+            h_index_attr = CustomField(name='h_index', value=scientist_obj.h_index)
+            h_index_attr.save()
+            total_citations_attr = CustomField(name='total_citations', value=scientist_obj.total_citations)
+            total_citations_attr.save()
+            is_pi_inb_attr = CustomField(name='is_pi_inb', value=scientist_obj.is_pi_inb, type='bool')
+            is_pi_inb_attr.save()
+            node_obj = NetworkNode(name=scientist_full_name, network=network_obj)
+            node_obj.save()
+            node_obj.attrs.add(num_articles_attr, h_index_attr, total_citations_attr, is_pi_inb_attr)
+        return node_obj
+
     def compute_coauthors_network(self, request, queryset):
-        ONLY_INB = True
+        computed_scientists = []
+        network_name = 'CollaborationNetwork'
+        if 'is_pi_inb__exact' in request.GET.keys():
+            only_inb = True
+            network_name += 'INB'
+        else:
+            only_inb = False
+        with transaction.atomic():
+            net_obj = Network(name=network_name, date=datetime.now())
+            net_obj.save()
+            for scientist_obj in queryset:
+                scientist_full_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
+                computed_scientists.append(scientist_full_name)
+                node_a_obj = self.__create_update_scientist_node(scientist_obj, net_obj)
+                author_authorships = Authorship.objects.filter(author=scientist_obj)
+                article_ids = []
+                for author_authorship in author_authorships:
+                    # iterate over articles
+                    article = author_authorship.artifact
+                    if article.id not in article_ids:
+                        article_ids.append(article.id)
+                        article_authorships = Authorship.objects.filter(artifact=article)
+                        author_ids = []
+                        for article_authorship in article_authorships:
+                            # iterate over article's authors
+                            author = article_authorship.author
+                            if author.id not in author_ids:
+                                author_ids.append(author.id)
+                                if author.id != scientist_obj.id:
+                                    if only_inb:
+                                        if author.is_pi_inb:  # create only nodes and edges of INB PIs
+                                            node_b_obj = self.__create_update_scientist_node(author, net_obj)
+                                            self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
+                                    else:
+                                        node_b_obj = self.__create_update_scientist_node(author, net_obj)
+                                        self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
+        computed_scientists_str = ', '.join(computed_scientists)
+        msg = f"It was computed the collaboration network of {computed_scientists_str}"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    compute_coauthors_network.short_description = 'Compute collaboration network'
 
 
 @admin.register(Institution)
@@ -479,3 +565,83 @@ class ArticleAdmin(admin.ModelAdmin):
         msg = f"The information of {len(queryset)} articles were successfully exported to the file {filename}"
         self.message_user(request, msg, level=messages.SUCCESS)
     export_articles_to_csv.short_description = 'Export articles information'
+
+
+@admin.register(Network)
+class NetworkAdmin(admin.ModelAdmin):
+    list_display = ('name', 'date', 'num_nodes', 'num_edges')
+    ordering = ('name',)
+    actions = ['export_network_into_gefx_format']
+
+    def num_nodes(self, obj):
+        nodes = NetworkNode.objects.filter(network=obj)
+        return len(nodes)
+    num_nodes.short_description = 'Number of Nodes'
+
+    def num_edges(self, obj):
+        edges = NetworkEdge.objects.filter(network=obj)
+        return len(edges)
+    num_edges.short_description = 'Number of Edges'
+
+    def __convert_model_date_type_to_gefx_type(self, data_type):
+        if data_type == 'int':
+            return 'integer'
+        elif data_type == 'bool':
+            return 'boolean'
+        elif data_type == 'float':
+            return 'float'
+        else:
+            return 'string'
+
+    def export_network_into_gefx_format(self, request, queryset):
+        for network_obj in queryset:
+            f_name = pathlib.Path(__file__).parents[1].joinpath('sna', 'gexf', network_obj.name+'.gexf')
+
+            with open(str(f_name), 'w', encoding='utf-8') as f:
+                f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
+                f.write('<gexf xmlns="http://www.gexf.net/1.2draft" xmlns:viz="http://www.gexf.net/1.1draft/viz" '
+                        'xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
+                        'xsi:schemaLocation="http://www.gexf.net/1.2draft http://www.gexf.net/1.2draft/gexf.xsd" '
+                        'version="1.2">\n')
+                f.write('<meta lastmodifieddate="{0}">\n'.format(network_obj.date))
+                f.write('<creator>ImpactApp (BSC)</creator>\n')
+                f.write('<description>{0}</description>\n'.format(network_obj.name))
+                f.write('</meta>\n')
+                f.write('<graph mode="static" defaultedgetype="{0}">\n'.format(network_obj.type))
+                # add data attributes
+                f.write('<attributes class="node">\n')
+                network_nodes = NetworkNode.objects.filter(network=network_obj)
+                list_attrs = []
+                for attr_index, attr in enumerate(network_nodes[0].attrs.all()):
+                    attr_type = self.__convert_model_date_type_to_gefx_type(attr.type)
+                    f.write('<attribute id="{0}" title="{1}" type="{2}"/>\n'.format(attr_index, attr.name, attr_type))
+                    list_attrs.append(attr.name)
+                f.write('</attributes>\n')
+                # add nodes
+                f.write('<nodes>\n')
+                list_nodes = []
+                for index_node, node in enumerate(network_nodes):
+                    f.write('<node id="{0}" label="{1}">\n'.format(index_node, node.name))
+                    f.write('<attvalues>\n')
+                    for attr in node.attrs.all():
+                        index_attr = list_attrs.index(attr.name)
+                        f.write('<attvalue for="{0}" value="{1}"/>\n'.format(index_attr, attr.value))
+                    f.write('</attvalues>\n')
+                    #f.write('<viz:size value="{0}"/>\n'.format(node['ff_ratio']))
+                    f.write('</node>\n')
+                    list_nodes.append(node.name)
+                f.write('</nodes>\n')
+                # add edges
+                f.write('<edges>\n')
+                network_edges = NetworkEdge.objects.filter(network=network_obj)
+                for index_edge, edge in enumerate(network_edges):
+                    id_vertexA = list_nodes.index(edge.node_a.name)
+                    id_vertexB = list_nodes.index(edge.node_b.name)
+                    weight = edge.attrs.all()[0].value
+                    f.write('<edge id="{0}" source="{1}" target="{2}" weight="{3}" label="{4}"/>\n'.
+                            format(index_edge, id_vertexA, id_vertexB, weight, weight))
+                f.write('</edges>\n')
+                f.write('</graph>\n')
+                f.write('</gexf>\n')
+        msg = f"The collaboration network was exported successfully"
+        self.message_user(request, msg, level=messages.SUCCESS)
