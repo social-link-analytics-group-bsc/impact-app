@@ -61,7 +61,8 @@ class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['compute_coauthors_network', 'get_articles_pubmed', 'mark_as_duplicate', 'remove_duplicates']
+    actions = ['check_scientist_authorship', 'compute_coauthors_network', 'get_articles_pubmed', 'mark_as_duplicate',
+               'obtain_pi_collaborator', 'remove_duplicates']
     list_filter = ('is_pi_inb',)
     objs_created = defaultdict(list)
     countries = []
@@ -312,6 +313,9 @@ class ScientistAdmin(admin.ModelAdmin):
                                     author_obj.save()
                                     ###
                                     # Iterate over author's affiliations
+                                    # TODO: Authorships should be created indepentedenly of
+                                    # the affiliation otherwise we can have authors without
+                                    # authorships, which is an inconsistency in the system
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
                                         if affiliation_str['Affiliation']:
@@ -457,9 +461,19 @@ class ScientistAdmin(admin.ModelAdmin):
             total_citations_attr.save()
             is_pi_inb_attr = CustomField(name='is_pi_inb', value=scientist_obj.is_pi_inb, type='bool')
             is_pi_inb_attr.save()
+            if scientist_obj.most_recent_pi_inb_collaborator:
+                pi_collaborator_full_name = scientist_obj.most_recent_pi_inb_collaborator.first_name + ' ' + \
+                                            scientist_obj.most_recent_pi_inb_collaborator.last_name
+                pi_inb_collaborator_attr = CustomField(name='pi_collaborator', value=pi_collaborator_full_name,
+                                                       type='str')
+            else:
+                pi_inb_collaborator_attr = CustomField(name='pi_collaborator', value='',
+                                                       type='str')
+            pi_inb_collaborator_attr.save()
             node_obj = NetworkNode(name=scientist_full_name, network=network_obj)
             node_obj.save()
-            node_obj.attrs.add(num_articles_attr, h_index_attr, total_citations_attr, is_pi_inb_attr)
+            node_obj.attrs.add(num_articles_attr, h_index_attr, total_citations_attr, is_pi_inb_attr,
+                               pi_inb_collaborator_attr)
         return node_obj
 
     def compute_coauthors_network(self, request, queryset):
@@ -474,35 +488,98 @@ class ScientistAdmin(admin.ModelAdmin):
             net_obj = Network(name=network_name, date=datetime.now())
             net_obj.save()
             for scientist_obj in queryset:
+                if not scientist_obj.is_pi_inb:  # only consider the pis of the inb as edge sources
+                    continue
                 scientist_full_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
                 computed_scientists.append(scientist_full_name)
                 node_a_obj = self.__create_update_scientist_node(scientist_obj, net_obj)
-                author_authorships = Authorship.objects.filter(author=scientist_obj)
+                author_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
                 article_ids = []
                 for author_authorship in author_authorships:
                     # iterate over articles
                     article = author_authorship.artifact
                     if article.id not in article_ids:
                         article_ids.append(article.id)
-                        article_authorships = Authorship.objects.filter(artifact=article)
-                        author_ids = []
+                        article_authorships = Authorship.objects.filter(artifact_id=article.id)
                         for article_authorship in article_authorships:
                             # iterate over article's authors
                             author = article_authorship.author
-                            if author.id not in author_ids:
-                                author_ids.append(author.id)
-                                if author.id != scientist_obj.id:
-                                    if only_inb:
-                                        if author.is_pi_inb:  # create only nodes and edges of INB PIs
-                                            node_b_obj = self.__create_update_scientist_node(author, net_obj)
-                                            self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
-                                    else:
+                            if author.id != scientist_obj.id:
+                                if only_inb:
+                                    if author.is_pi_inb:  # create only nodes and edges of INB PIs
                                         node_b_obj = self.__create_update_scientist_node(author, net_obj)
                                         self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
+                                else:
+                                    node_b_obj = self.__create_update_scientist_node(author, net_obj)
+                                    self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
         computed_scientists_str = ', '.join(computed_scientists)
         msg = f"It was computed the collaboration network of {computed_scientists_str}"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_coauthors_network.short_description = 'Compute collaboration network'
+
+    def obtain_pi_collaborator(self, request, queryset):
+        for scientist_obj in queryset:
+            logging.info(f"Obtaining the pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name}")
+            if scientist_obj.most_recent_pi_inb_collaborator:
+                continue
+            elif scientist_obj.is_pi_inb:
+                scientist_obj.most_recent_pi_inb_collaborator = scientist_obj
+                scientist_obj.save()
+                continue
+            else:
+                inb_pi_collaborations = {}
+                scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
+                article_ids = []
+                for scientist_authorship in scientist_authorships:
+                    article = scientist_authorship.artifact
+                    if article.id not in article_ids:
+                        article_ids.append(article.id)
+                        article_authorships = Authorship.objects.filter(artifact_id=article.id)
+                        author_ids = []
+                        for article_authorship in article_authorships:
+                            author = article_authorship.author
+                            if author.id not in author_ids:
+                                author_ids.append(author.id)
+                                if author.id != scientist_obj.id:
+                                    if author.is_pi_inb:
+                                        if author.id in inb_pi_collaborations.keys():
+                                            inb_pi_collaborations[author.id]['num_collaborations'] += 1
+                                            if article.year > inb_pi_collaborations[author.id]['year_last_collaboration']:
+                                                inb_pi_collaborations[author.id]['year'] = article.year
+                                        else:
+                                            collaboration_dict = {
+                                                'scientist_obj': author,
+                                                'year_last_collaboration': article.year,
+                                                'num_collaborations': 1
+                                            }
+                                            inb_pi_collaborations[author.id] = collaboration_dict
+                inb_pi_collaborator = None
+                for id, collaboration_info in inb_pi_collaborations.items():
+                    if not inb_pi_collaborator:
+                        inb_pi_collaborator = collaboration_info
+                    else:
+                        if collaboration_info['num_collaborations'] > inb_pi_collaborator['num_collaborations']:
+                            inb_pi_collaborator = collaboration_info
+                        elif collaboration_info['num_collaborations'] == inb_pi_collaborator['num_collaborations']:
+                            if collaboration_info['year_last_collaboration'] > inb_pi_collaborator['year_last_collaboration']:
+                                inb_pi_collaborator = collaboration_info
+                if inb_pi_collaborator:
+                    logging.info(f"The pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name} is "
+                                 f"{inb_pi_collaborator['scientist_obj'].first_name + ' ' +  inb_pi_collaborator['scientist_obj'].last_name}")
+                    scientist_obj.most_recent_pi_inb_collaborator = inb_pi_collaborator['scientist_obj']
+                    scientist_obj.save()
+
+    def check_scientist_authorship(self, request, queryset):
+        num_scientists_without_authorship = 0
+        for scientist_obj in queryset:
+            scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
+            if not scientist_authorships:
+                num_scientists_without_authorship += 1
+        msg = f"Out of the {len(queryset)} scientists selected, " \
+              f"{num_scientists_without_authorship} do not have authorship"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    check_scientist_authorship.short_description = 'Check Authorship of Scientists'
+
 
 
 @admin.register(Institution)
