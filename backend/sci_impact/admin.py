@@ -633,11 +633,11 @@ class ScientistAdmin(admin.ModelAdmin):
                         if co_authored_with_inb_pi:
                             logging.info(f"Saving authorship of {scientist_name}")
                             for index, co_author in enumerate(co_authors):
-                                try:
-                                    Authorship.objects.get(author=co_author, artifact=article_obj)
-                                except Authorship.DoesNotExist:
+                                authorship_objs = Authorship.objects.filter(author=co_author, artifact=article_obj)
+                                if len(authorship_objs) == 0:
                                     self.__create_update_authorship(co_author, index, total_authors, article_obj)
                                     new_authorship += 1
+                                    logging.info(f"New authorship created!")
                     except Article.DoesNotExist:
                         # the paper is ignored if it doesn't already exist in the database
                         pass
