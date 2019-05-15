@@ -61,8 +61,8 @@ class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['check_scientist_authorship', 'compute_coauthors_network', 'get_articles_pubmed', 'mark_as_duplicate',
-               'obtain_pi_collaborator', 'remove_duplicates']
+    actions = ['check_scientist_authorship', 'compute_coauthors_network', 'get_articles_pubmed',
+               'get_authorship_of_scientists', 'mark_as_duplicate', 'obtain_pi_collaborator', 'remove_duplicates']
     list_filter = ('is_pi_inb',)
     objs_created = defaultdict(list)
     countries = []
@@ -239,6 +239,17 @@ class ScientistAdmin(admin.ModelAdmin):
             authorship_obj.save()
             self.objs_created['Authorship'].append(authorship_obj)
 
+    def __create_update_scientist(self, author):
+        author_dict = {
+            'first_name': author['ForeName'],
+            'last_name': author['LastName']
+        }
+        full_name = author['ForeName'] + ' ' + author['LastName']
+        author_dict['gender'] = get_gender(full_name)
+        author_obj = Scientist(**author_dict)
+        author_obj.save()
+        return author_obj
+
     def get_articles_pubmed(self, request, queryset):
         ec = EntrezClient()
         for scientist_obj in queryset:
@@ -299,10 +310,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                             last_name__iexact=author_dict['last_name']
                                         )
                                     except Scientist.DoesNotExist:
-                                        full_name = author['ForeName'] + ' ' + author['LastName']
-                                        author_dict['gender'] = get_gender(full_name)
-                                        author_obj = Scientist(**author_dict)
-                                        author_obj.save()
+                                        author_obj = self.__create_update_scientist(author)
                                         self.objs_created['Scientist'].append(author_obj)
                                     # Update scientists' publication metrics
                                     author_obj.articles += 1
@@ -313,7 +321,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                     author_obj.save()
                                     ###
                                     # Iterate over author's affiliations
-                                    # TODO: Authorships should be created indepentedenly of
+                                    # TODO: Authorships should be created independently of
                                     # the affiliation otherwise we can have authors without
                                     # authorships, which is an inconsistency in the system
                                     ###
@@ -370,7 +378,7 @@ class ScientistAdmin(admin.ModelAdmin):
                         # Transaction failed, log the error and continue with the paper
                         logging.error(e)
         self.__display_feedback_msg(request)
-    get_articles_pubmed.short_description = 'Get articles (Source: PubMed)'
+    get_articles_pubmed.short_description = 'Get articles (source: PubMed)'
 
     def remove_duplicates(self, request, queryset):
         duplicate_scientists = []
@@ -515,7 +523,7 @@ class ScientistAdmin(admin.ModelAdmin):
         computed_scientists_str = ', '.join(computed_scientists)
         msg = f"It was computed the collaboration network of {computed_scientists_str}"
         self.message_user(request, msg, level=messages.SUCCESS)
-    compute_coauthors_network.short_description = 'Compute collaboration network'
+    compute_coauthors_network.short_description = 'Generate collaboration network'
 
     def obtain_pi_collaborator(self, request, queryset):
         for scientist_obj in queryset:
@@ -575,11 +583,67 @@ class ScientistAdmin(admin.ModelAdmin):
             scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
             if not scientist_authorships:
                 num_scientists_without_authorship += 1
+            else:
+                logging.info(f"The scientist {scientist_obj.id} isn't connected with a pi but has "
+                             f"{len(scientist_authorships)} authorships")
         msg = f"Out of the {len(queryset)} scientists selected, " \
               f"{num_scientists_without_authorship} do not have authorship"
         self.message_user(request, msg, level=messages.SUCCESS)
-    check_scientist_authorship.short_description = 'Check Authorship of Scientists'
+    check_scientist_authorship.short_description = 'Check authorship of scientists'
 
+    def __get_co_authors(self, authors):
+        paper_scientists = []
+        found_inb_pi = False
+        for author in authors:
+            if 'ForeName' in author.keys():
+                try:
+                    author_obj = Scientist.objects.get(
+                        first_name__iexact=author['ForeName'],
+                        last_name__iexact=author['LastName']
+                    )
+                    if author_obj.is_pi_inb:
+                        found_inb_pi = True
+                    paper_scientists.append(author_obj)
+                except Scientist.DoesNotExist:
+                    paper_scientists.append(self.__create_update_scientist(author))
+        return found_inb_pi, paper_scientists
+
+    def get_authorship_of_scientists(self, request, queryset):
+        ec = EntrezClient()
+        scientists_without_authorship = 0
+        new_authorship = 0
+        for scientist_obj in queryset:
+            scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
+            if not scientist_authorships:
+                scientists_without_authorship += 1
+                scientist_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
+                logging.info(f"Getting articles of {scientist_name}")
+                results = ec.search(f"{scientist_name}[author]")
+                papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
+                for paper in papers:
+                    paper_doi = self.__get_paper_doi(paper)
+                    try:
+                        if paper_doi:
+                            article_obj = Article.objects.get(doi=paper_doi)
+                        else:
+                            article_obj = Article.objects.get(repo_ids__value=str(paper['MedlineCitation']['PMID']))
+                        paper_authors = paper['MedlineCitation']['Article']['AuthorList']
+                        co_authored_with_inb_pi, co_authors = self.__get_co_authors(paper_authors)
+                        total_authors = len(co_authors)
+                        if co_authored_with_inb_pi:
+                            logging.info(f"Saving authorship of {scientist_name}")
+                            for index, co_author in enumerate(co_authors):
+                                try:
+                                    Authorship.objects.get(author=co_author, artifact=article_obj)
+                                except Authorship.DoesNotExist:
+                                    self.__create_update_authorship(co_author, index, total_authors, article_obj)
+                                    new_authorship += 1
+                    except Article.DoesNotExist:
+                        # the paper is ignored if it doesn't already exist in the database
+                        pass
+        msg = f"{new_authorship} were created for the {scientists_without_authorship} scientists without authorship"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    get_authorship_of_scientists.short_description = 'Get authorship of scientists'
 
 
 @admin.register(Institution)
