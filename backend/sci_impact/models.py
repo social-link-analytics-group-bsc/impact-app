@@ -170,6 +170,7 @@ class Scientist(Person):
     is_duplicate = models.BooleanField(default=False)
     is_pi_inb = models.BooleanField(default=False)
     most_recent_pi_inb_collaborator = models.ForeignKey('Scientist', on_delete=models.CASCADE, null=True, blank=True)
+    alternative_names = models.TextField(null=True, blank=True)
 
     def __unicode__(self):
         return f"{self.first_name} {self.last_name}"
