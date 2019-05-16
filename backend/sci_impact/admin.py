@@ -58,11 +58,11 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb')
+    list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb', 'is_duplicate')
     ordering = ('last_name', )
     search_fields = ('first_name', 'last_name',)
-    actions = ['check_scientist_authorship', 'compute_coauthors_network', 'get_articles_pubmed',
-               'get_authorship_of_scientists', 'mark_as_duplicate', 'obtain_pi_collaborator', 'remove_duplicates']
+    actions = ['check_scientist_authorship', 'complete_authorship_of_scientists', 'compute_coauthors_network',
+               'get_articles_pubmed', 'mark_as_duplicate', 'obtain_pi_collaborator', 'remove_duplicates']
     list_filter = ('is_pi_inb',)
     objs_created = defaultdict(list)
     countries = []
@@ -231,13 +231,14 @@ class ScientistAdmin(admin.ModelAdmin):
         if institution_obj:
             authorship_dict['institution'] = institution_obj
         try:
-            Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
+            authorship_obj = Authorship.objects.get(author=author_obj, artifact=article_obj, institution=institution_obj)
             Authorship.objects.filter(author=author_obj, artifact=article_obj, institution=institution_obj).\
                 update(**authorship_dict)
         except Authorship.DoesNotExist:
             authorship_obj = Authorship(**authorship_dict)
             authorship_obj.save()
             self.objs_created['Authorship'].append(authorship_obj)
+        return authorship_obj
 
     def __create_update_scientist(self, author):
         author_dict = {
@@ -320,28 +321,20 @@ class ScientistAdmin(admin.ModelAdmin):
                                         author_obj.articles_as_last_author += 1
                                     author_obj.save()
                                     ###
+                                    # 5) Create/Retrieve article's authorship
+                                    ###
+                                    authorship_obj = self.__create_update_authorship(author_obj, index, total_authors,
+                                                                                     article_obj)
+                                    ###
                                     # Iterate over author's affiliations
-                                    # TODO: Authorships should be created independently of
-                                    # the affiliation otherwise we can have authors without
-                                    # authorships, which is an inconsistency in the system
                                     ###
                                     for affiliation_str in author['AffiliationInfo']:
+                                        affiliations = []
                                         if affiliation_str['Affiliation']:
                                             affiliations = self.__get_affiliations(affiliation_str['Affiliation'])
-                                            if len(affiliations) == 0:
-                                                # the author does not have affiliations, let's create their
-                                                # authorship anyways
-                                                self.__create_update_authorship(author_obj, index, total_authors,
-                                                                                article_obj)
-                                                continue
-                                        else:
-                                            # affiliation does not exists, let's create the authorship anyways
-                                            self.__create_update_authorship(author_obj, index, total_authors,
-                                                                            article_obj)
-                                            continue
                                         for institution in affiliations:
                                             ###
-                                            # 5) Create/Retrieve institution
+                                            # 6) Create/Retrieve institution
                                             ###
                                             institution_name = institution['name']
                                             institution_country_obj = Country.objects.get(
@@ -357,7 +350,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                                 institution_obj.save()
                                                 self.objs_created['Institution'].append(institution_obj)
                                             ###
-                                            # 6) Create/Retrieve author's affiliation
+                                            # 7) Create/Retrieve author's affiliation
                                             ###
                                             affiliation_obj, created = Affiliation.objects.get_or_create(
                                                 scientist=author_obj,
@@ -370,10 +363,10 @@ class ScientistAdmin(admin.ModelAdmin):
                                                 affiliation_obj.articles_as_first_author += 1
                                             affiliation_obj.save()
                                             ###
-                                            # 7) Create/Retrieve article's authorship
+                                            # 8) Update authorship with institution
                                             ###
-                                            self.__create_update_authorship(author_obj, index, total_authors,
-                                                                            article_obj, institution_obj)
+                                            authorship_obj.institution = institution_obj
+                                            authorship_obj.save()
                     except IntegrityError as e:
                         # Transaction failed, log the error and continue with the paper
                         logging.error(e)
@@ -608,7 +601,7 @@ class ScientistAdmin(admin.ModelAdmin):
                     paper_scientists.append(self.__create_update_scientist(author))
         return found_inb_pi, paper_scientists
 
-    def get_authorship_of_scientists(self, request, queryset):
+    def complete_authorship_of_scientists(self, request, queryset):
         ec = EntrezClient()
         scientists_without_authorship = 0
         new_authorship = 0
@@ -618,32 +611,34 @@ class ScientistAdmin(admin.ModelAdmin):
                 scientists_without_authorship += 1
                 scientist_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
                 logging.info(f"Getting articles of {scientist_name}")
-                results = ec.search(f"{scientist_name}[author]")
-                papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
-                for paper in papers:
-                    paper_doi = self.__get_paper_doi(paper)
-                    try:
-                        if paper_doi:
-                            article_obj = Article.objects.get(doi=paper_doi)
-                        else:
-                            article_obj = Article.objects.get(repo_ids__value=str(paper['MedlineCitation']['PMID']))
-                        paper_authors = paper['MedlineCitation']['Article']['AuthorList']
-                        co_authored_with_inb_pi, co_authors = self.__get_co_authors(paper_authors)
-                        total_authors = len(co_authors)
-                        if co_authored_with_inb_pi:
-                            logging.info(f"Saving authorship of {scientist_name}")
-                            for index, co_author in enumerate(co_authors):
-                                authorship_objs = Authorship.objects.filter(author=co_author, artifact=article_obj)
-                                if len(authorship_objs) == 0:
-                                    self.__create_update_authorship(co_author, index, total_authors, article_obj)
-                                    new_authorship += 1
-                                    logging.info(f"New authorship created!")
-                    except Article.DoesNotExist:
-                        # the paper is ignored if it doesn't already exist in the database
-                        pass
-        msg = f"{new_authorship} were created for the {scientists_without_authorship} scientists without authorship"
+                results = ec.search(f"{scientist_name}[author]", use_history=False, batch_size=500)
+                if len(results['IdList']) > 0:
+                    papers = ec.fetch_in_bulk_from_list(results['IdList'])
+                    for paper in papers:
+                        paper_doi = self.__get_paper_doi(paper)
+                        try:
+                            if paper_doi:
+                                article_obj = Article.objects.get(doi=paper_doi)
+                            else:
+                                article_obj = Article.objects.get(repo_ids__value=str(paper['MedlineCitation']['PMID']))
+                            paper_authors = paper['MedlineCitation']['Article']['AuthorList']
+                            co_authored_with_inb_pi, co_authors = self.__get_co_authors(paper_authors)
+                            total_authors = len(co_authors)
+                            if co_authored_with_inb_pi:
+                                logging.info(f"Saving authorship of {scientist_name}")
+                                for index, co_author in enumerate(co_authors):
+                                    authorship_objs = Authorship.objects.filter(author=co_author, artifact=article_obj)
+                                    if len(authorship_objs) == 0:
+                                        self.__create_update_authorship(co_author, index, total_authors, article_obj)
+                                        new_authorship += 1
+                                        logging.info(f"New authorship created!")
+                        except Article.DoesNotExist:
+                            # the paper is ignored if it doesn't already exist in the database
+                            pass
+        msg = f"{new_authorship} new authorship were created for the {scientists_without_authorship} scientists without " \
+              f"authorship"
         self.message_user(request, msg, level=messages.SUCCESS)
-    get_authorship_of_scientists.short_description = 'Get authorship of scientists'
+    complete_authorship_of_scientists.short_description = 'Complete authorship of scientists'
 
 
 @admin.register(Institution)
