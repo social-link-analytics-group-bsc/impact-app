@@ -1,4 +1,5 @@
 from Bio import Entrez
+from django.conf import settings
 from urllib.error import HTTPError
 from data_collector.utils import get_config
 
@@ -15,11 +16,14 @@ logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('imp
 class EntrezClient:
     __entrez = None
 
-    def __init__(self):
-        config_file = get_config('config.json')
+    def __init__(self, read_config_from_settigs=True):
+        if read_config_from_settigs:
+            config = settings.PUBMED_API
+        else:
+            config = get_config('config.json')
         self.__entrez = Entrez
-        self.__entrez.email = config_file['pubmed']['email']
-        self.__entrez.api_key = config_file['pubmed']['api_key']
+        self.__entrez.email = config['email']
+        self.__entrez.api_key = config['api_key']
 
     def search(self, query, db='pubmed', use_history=True, batch_size=20):
         if use_history:
@@ -107,14 +111,21 @@ class EntrezClient:
 
 
 #if __name__ == '__main__':
-#    ec = EntrezClient()
-    #results = ec.search('10.1093/bioinformatics/btx420[doi]')
+#    ec = EntrezClient(False)
+    #results = ec.search('10.1074/jbc.m105766200[doi]')
 #    results = ec.fetch_in_bulk_from_list(['28666314'])
 #    print('Done!')
-#     results = ec.search('Alfonso Valencia[author]')
+#     results = ec.search('M Carmen Arilla[author]')
 #     papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
 #     for i, paper in enumerate(papers):
 #         print(f"{i + 1}) {paper['MedlineCitation']['Article']['ArticleTitle']} ({paper['MedlineCitation']['PMID']})")
+#         print(str(paper['MedlineCitation']['Article']['PublicationTypeList'][0]))
+#         print(str(paper['MedlineCitation']['Article']['Journal']['ISSN']))
+#         print(str(paper['MedlineCitation']['Article']['Journal']['JournalIssue']['Issue']))
+#         print(str(paper['MedlineCitation']['Article']['Journal']['JournalIssue']['Volume']))
+#         print(int(paper['MedlineCitation']['Article']['Journal']['JournalIssue']['PubDate']['Year']))
+#         print(str(paper['MedlineCitation']['Article']['Journal']['JournalIssue']['PubDate']['Month']))
+#         print(int(paper['MedlineCitation']['Article']['Journal']['JournalIssue']['PubDate']['Day']))
 #     # print the title of the first paper
 #     # print(papers[0]['MedlineCitation']['Article']['ArticleTitle'])
 #     # get citations of the first paper
