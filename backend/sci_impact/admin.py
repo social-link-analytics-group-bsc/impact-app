@@ -384,10 +384,10 @@ class ScientistAdmin(admin.ModelAdmin):
                 duplicate_scientists.append(scientist_obj)
             else:
                 scientist_to_keep = scientist_obj
-        alternative_names = ''
+        alternative_names = []
         for duplicate_scientist in duplicate_scientists:
             # 0) save alternative names
-            alternative_names += duplicate_scientist.first_name + ' ' + duplicate_scientist.last_name
+            alternative_names.append(duplicate_scientist.first_name + ' ' + duplicate_scientist.last_name)
             # 1) update scientist metrics
             scientist_to_keep.articles += duplicate_scientist.articles
             scientist_to_keep.articles_as_first_author += duplicate_scientist.articles_as_first_author
@@ -416,7 +416,7 @@ class ScientistAdmin(admin.ModelAdmin):
                 affiliation.save()
             # 4) remove duplicate
             Scientist.objects.get(id=duplicate_scientist.id).delete()
-        scientist_to_keep.alternative_names = alternative_names
+        scientist_to_keep.alternative_names = ', '.join(alternative_names)
         scientist_to_keep.save()
         msg = f"Duplicates were successfully removed"
         self.message_user(request, msg, level=messages.SUCCESS)
