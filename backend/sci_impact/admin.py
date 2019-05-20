@@ -7,6 +7,9 @@ from django.contrib import admin, messages
 from django.db import IntegrityError, transaction
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge
+from similarity.jarowinkler import JaroWinkler
+from data_collector.utils import normalize_transform_text
+
 import csv
 import logging
 import pathlib
@@ -58,12 +61,13 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender', 'nationality', 'is_pi_inb', 'is_duplicate')
-    ordering = ('last_name', )
+    list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'articles', 'articles_citations',
+                    'total_citations', 'most_recent_pi_inb_collaborator')
+    ordering = ('last_name', 'articles')
     search_fields = ('first_name', 'last_name',)
-    actions = ['check_scientist_authorship', 'complete_authorship_of_scientists', 'compute_coauthors_network',
-               'get_articles_pubmed', 'mark_as_duplicate', 'obtain_pi_collaborator', 'remove_duplicates']
-    list_filter = ('is_pi_inb',)
+    actions = ['compute_coauthors_network', 'get_articles_pubmed', 'identify_possible_duplicates', 'mark_as_duplicate',
+               'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate']
+    list_filter = ('is_pi_inb', 'most_recent_pi_inb_collaborator')
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -417,10 +421,11 @@ class ScientistAdmin(admin.ModelAdmin):
             # 4) remove duplicate
             Scientist.objects.get(id=duplicate_scientist.id).delete()
         scientist_to_keep.alternative_names = ', '.join(alternative_names)
+        scientist_to_keep.possible_duplicate = False
         scientist_to_keep.save()
-        msg = f"Duplicates were successfully removed"
+        msg = f"Records were successfully merged"
         self.message_user(request, msg, level=messages.SUCCESS)
-    remove_duplicates.short_description = 'Remove duplicates'
+    remove_duplicates.short_description = 'Merge records'
 
     def mark_as_duplicate(self, request, queryset):
         for scientist_obj in queryset:
@@ -529,9 +534,9 @@ class ScientistAdmin(admin.ModelAdmin):
     def obtain_pi_collaborator(self, request, queryset):
         for scientist_obj in queryset:
             logging.info(f"Obtaining the pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name}")
-            if scientist_obj.most_recent_pi_inb_collaborator:
-                continue
-            elif scientist_obj.is_pi_inb:
+            #if scientist_obj.most_recent_pi_inb_collaborator:
+            #    continue
+            if scientist_obj.is_pi_inb:
                 scientist_obj.most_recent_pi_inb_collaborator = scientist_obj
                 scientist_obj.save()
                 continue
@@ -650,6 +655,52 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     complete_authorship_of_scientists.short_description = 'Complete authorship of scientists'
 
+    def identify_possible_duplicates(self, request, queryset):
+        jarowinkler = JaroWinkler()
+        all_scientists = Scientist.objects.order_by('last_name')
+        min_score_last_name_similarity = 0.95
+        min_score_first_name_similarity = 0.75
+        logging.info("Detecting possible duplicates, it might take some time, please wait...")
+        for scientist_obj in queryset:
+            if scientist_obj.possible_duplicate:
+                continue
+            transformed_last_name_sobj = normalize_transform_text(scientist_obj.last_name.lower())
+            for scientist_obj_in_all in all_scientists:
+                if scientist_obj_in_all.id == scientist_obj.id:
+                    continue
+                transformed_last_name_sobjall = normalize_transform_text(scientist_obj_in_all.last_name.lower())
+                # compare only against last names that start with the same letter
+                if transformed_last_name_sobj[0] == transformed_last_name_sobjall[0]:
+                    # compute similarity of last names
+                    last_name_similarity_score = jarowinkler.similarity(transformed_last_name_sobj,
+                                                                        transformed_last_name_sobjall)
+                    if last_name_similarity_score >= min_score_last_name_similarity:
+                        # compute similarity of first names
+                        transformed_first_name_sobj = normalize_transform_text(scientist_obj.first_name.lower())
+                        transformed_first_name_sobjall = normalize_transform_text(scientist_obj_in_all.first_name.lower())
+                        first_name_similarity_score = jarowinkler.similarity(transformed_first_name_sobj,
+                                                                             transformed_first_name_sobjall)
+                        if first_name_similarity_score >= min_score_first_name_similarity:
+                            if not scientist_obj.possible_duplicate:
+                                scientist_obj.possible_duplicate = True
+                                scientist_obj.save()
+                            scientist_obj_in_all.possible_duplicate = True
+                            scientist_obj_in_all.save()
+                else:
+                    if transformed_last_name_sobj[0] < transformed_last_name_sobjall[0]:
+                        break
+        possible_duplicates = Scientist.objects.filter(possible_duplicate=True).count()
+        msg = f"{possible_duplicates} possible duplicates were identified"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    identify_possible_duplicates.short_description = 'Identify possible duplicates'
+
+    def mark_as_not_duplicate(self, request, queryset):
+        for scientist_obj in queryset:
+            scientist_obj.possible_duplicate = False
+            scientist_obj.save()
+        msg = f"{len(queryset)} records were marked as not duplicates"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    mark_as_not_duplicate.short_description = 'Remove from duplicates list'
 
 @admin.register(Institution)
 class InstitutionAdmin(admin.ModelAdmin):
