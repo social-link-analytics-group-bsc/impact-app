@@ -4,6 +4,7 @@ import gender_guesser.detector as gender
 import json
 import logging
 import re
+import unicodedata
 
 
 # Get configuration from file
@@ -49,3 +50,7 @@ def curate_text(raw_text):
     # remove duplicate whitespaces and newline characters
     clean_text = ' '.join(clean_text.split())
     return clean_text
+
+
+def normalize_transform_text(raw_text):
+    return unicodedata.normalize('NFD', raw_text).encode('ascii', 'ignore')
