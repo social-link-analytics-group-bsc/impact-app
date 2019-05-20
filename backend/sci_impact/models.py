@@ -168,6 +168,7 @@ class Scientist(Person):
     i10_index = models.IntegerField(default=0)
     # additional fields
     is_duplicate = models.BooleanField(default=False)
+    possible_duplicate = models.BooleanField(default=False)
     is_pi_inb = models.BooleanField(default=False)
     most_recent_pi_inb_collaborator = models.ForeignKey('Scientist', on_delete=models.CASCADE, null=True, blank=True)
     alternative_names = models.TextField(null=True, blank=True)
