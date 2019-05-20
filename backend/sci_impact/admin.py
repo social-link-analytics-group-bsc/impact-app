@@ -61,13 +61,13 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'articles', 'articles_citations',
-                    'total_citations', 'most_recent_pi_inb_collaborator')
-    ordering = ('last_name', 'articles')
+    list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'articles', 'articles_as_first_author',
+                    'articles_as_last_author','articles_citations', 'total_citations')
+    ordering = ('last_name', 'articles', 'articles_as_first_author', 'articles_as_last_author')
     search_fields = ('first_name', 'last_name',)
     actions = ['compute_coauthors_network', 'get_articles_pubmed', 'identify_possible_duplicates', 'mark_as_duplicate',
-               'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate']
-    list_filter = ('is_pi_inb', 'most_recent_pi_inb_collaborator')
+               'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate', 'udpate_productivity_metrics']
+    list_filter = ('is_pi_inb', )
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -418,7 +418,12 @@ class ScientistAdmin(admin.ModelAdmin):
             for affiliation in affiliations:
                 affiliation.scientist = scientist_to_keep
                 affiliation.save()
-            # 4) remove duplicate
+            # 4) update pi collaborator
+            collabs = Scientist.objects.filter(most_recent_pi_inb_collaborator=duplicate_scientist)
+            for collab in collabs:
+                collab.most_recent_pi_inb_collaborator = scientist_to_keep
+                collab.most_recent_pi_inb_collaborator.save()
+            # 5) remove duplicate
             Scientist.objects.get(id=duplicate_scientist.id).delete()
         scientist_to_keep.alternative_names = ', '.join(alternative_names)
         scientist_to_keep.possible_duplicate = False
@@ -534,8 +539,8 @@ class ScientistAdmin(admin.ModelAdmin):
     def obtain_pi_collaborator(self, request, queryset):
         for scientist_obj in queryset:
             logging.info(f"Obtaining the pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name}")
-            #if scientist_obj.most_recent_pi_inb_collaborator:
-            #    continue
+            if scientist_obj.most_recent_pi_inb_collaborator:
+                continue
             if scientist_obj.is_pi_inb:
                 scientist_obj.most_recent_pi_inb_collaborator = scientist_obj
                 scientist_obj.save()
@@ -643,6 +648,12 @@ class ScientistAdmin(admin.ModelAdmin):
                                     self.__create_update_authorship(co_author, index, total_authors, article_obj)
                                     new_authorship += 1
                                     logging.info(f"New authorship created!")
+                                    co_author.articles += 1
+                                    if index == 0:
+                                        co_author.articles_as_first_author += 1
+                                    if index == total_authors-1:
+                                        co_author.articles_as_last_author += 1
+                                    co_author.save()
                         except Article.DoesNotExist:
                             _, inb_pi_within_authors = self.__get_co_authors(paper_authors)
                             if inb_pi_within_authors:
@@ -701,6 +712,29 @@ class ScientistAdmin(admin.ModelAdmin):
         msg = f"{len(queryset)} records were marked as not duplicates"
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_as_not_duplicate.short_description = 'Remove from duplicates list'
+
+    def udpate_productivity_metrics(self, request, queryset):
+        for scientist_obj in queryset:
+            scientist_production = {'articles': 0, 'articles_as_first_author': 0, 'articles_as_last_author': 0}
+            articles = []
+            logging.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
+            scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
+            for scientist_authorship in scientist_authorships:
+                if scientist_authorship.artifact_id not in articles:
+                    articles.append(scientist_authorship.artifact_id)
+                    scientist_production['articles'] += 1
+                    if scientist_authorship.first_author:
+                        scientist_production['articles_as_first_author'] += 1
+                    if scientist_authorship.last_author:
+                        scientist_production['articles_as_last_author'] += 1
+            scientist_obj.articles = scientist_production['articles']
+            scientist_obj.articles_as_first_author = scientist_production['articles_as_first_author']
+            scientist_obj.articles_as_last_author = scientist_production['articles_as_last_author']
+            scientist_obj.save()
+        msg = f"{len(queryset)} records were updated"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    udpate_productivity_metrics.short_description = 'Update productivity metrics'
+
 
 @admin.register(Institution)
 class InstitutionAdmin(admin.ModelAdmin):
