@@ -440,99 +440,118 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_as_duplicate.short_description = 'Mark as duplicate'
 
-    def __update_number_collaborations(self, edge_obj):
-        edge_attrs = edge_obj.attrs.all()
-        for edge_attr in edge_attrs:
-            if edge_attr.name == 'num_collaborations':
-                if edge_attr.type == 'int':
-                    cast_value = int(edge_attr.value)
-                    cast_value += 1
-                    edge_attr.value = str(cast_value)
-                    edge_attr.save()
-                break
-        edge_obj.save()
+    def __insert_collaboration_edge(self, edge_tuple, edge_val, nodes_dict):
+        node_a_obj = nodes_dict.get(edge_tuple[0])
+        node_b_obj = nodes_dict.get(edge_tuple[1])
+        edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=node_a_obj.network)
+        edge.save()
+        num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'])
+        num_collaborations_attr.save()
+        edge.attrs.add(num_collaborations_attr)
+        logging.info(f"Created a edge between {node_a_obj.name} and {node_b_obj.name}")
 
-    def __create_update_collaboration_edge(self, node_a_obj, node_b_obj, network_obj):
-        try:
-            edge_obj = NetworkEdge.objects.get(node_a=node_a_obj, node_b=node_b_obj, network=network_obj)
-            self.__update_number_collaborations(edge_obj)
-        except NetworkEdge.DoesNotExist:
-            try:
-                edge_obj = NetworkEdge.objects.get(node_a=node_b_obj, node_b=node_a_obj, network=network_obj)
-                self.__update_number_collaborations(edge_obj)
-            except NetworkEdge.DoesNotExist:
-                edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=network_obj)
-                edge.save()
-                num_collaborations_attr = CustomField(name='num_collaborations', value=1)
-                num_collaborations_attr.save()
-                edge.attrs.add(num_collaborations_attr)
-
-    def __create_update_scientist_node(self, scientist_obj, network_obj):
-        scientist_full_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
-        try:
-            node_obj = NetworkNode.objects.get(name=scientist_full_name, network=network_obj)
-        except NetworkNode.DoesNotExist:
-            num_articles_attr = CustomField(name='articles', value=scientist_obj.articles)
-            num_articles_attr.save()
-            h_index_attr = CustomField(name='h_index', value=scientist_obj.h_index)
-            h_index_attr.save()
-            total_citations_attr = CustomField(name='total_citations', value=scientist_obj.total_citations)
-            total_citations_attr.save()
-            is_pi_inb_attr = CustomField(name='is_pi_inb', value=scientist_obj.is_pi_inb, type='bool')
-            is_pi_inb_attr.save()
-            if scientist_obj.most_recent_pi_inb_collaborator:
-                pi_collaborator_full_name = scientist_obj.most_recent_pi_inb_collaborator.first_name + ' ' + \
-                                            scientist_obj.most_recent_pi_inb_collaborator.last_name
-                pi_inb_collaborator_attr = CustomField(name='pi_collaborator', value=pi_collaborator_full_name,
-                                                       type='str')
-            else:
-                pi_inb_collaborator_attr = CustomField(name='pi_collaborator', value='',
-                                                       type='str')
-            pi_inb_collaborator_attr.save()
-            node_obj = NetworkNode(name=scientist_full_name, network=network_obj)
-            node_obj.save()
-            node_obj.attrs.add(num_articles_attr, h_index_attr, total_citations_attr, is_pi_inb_attr,
-                               pi_inb_collaborator_attr)
+    def __insert_scientist_node(self, scientist_name, scientist_info, network_obj):
+        node_obj = NetworkNode(name=scientist_name, network=network_obj)
+        node_obj.save()
+        for attr_name, attr_info in scientist_info.items():
+            attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'])
+            attr_obj.save()
+            node_obj.attrs.add(attr_obj)
+        logging.info(f"Inserted the node {scientist_name}")
         return node_obj
 
+    def __create_scientist_node(self, scientist_obj, nodes):
+        if str(scientist_obj) not in nodes.keys():
+            if scientist_obj.most_recent_pi_inb_collaborator:
+                pi_collaborator_full_name = str(scientist_obj.most_recent_pi_inb_collaborator)
+            else:
+                pi_collaborator_full_name = ''
+            scientist_dict = {
+                'gender': {'value': scientist_obj.gender, 'type': 'str'},
+                'num_articles': {'value': scientist_obj.articles, 'type': 'int'},
+                'h_index': {'value': scientist_obj.h_index, 'type': 'int'},
+                'total_citations': {'value': scientist_obj.total_citations, 'type': 'int'},
+                'is_inb_pi': {'value': scientist_obj.is_pi_inb, 'type': 'bool'},
+                'inb_pi_collaborator': {'value': pi_collaborator_full_name, 'type': 'str'}
+            }
+            nodes[str(scientist_obj)] = scientist_dict
+            logging.info(f"Created the scientist node {str(scientist_obj)}")
+        return nodes
+
+    def __create_update_edge(self, scientist_a, scientist_b, edges):
+        edge_a = (str(scientist_a), str(scientist_b))
+        edge_b = (str(scientist_b), str(scientist_a))
+        edge = edges.get(edge_a)
+        if edge:
+            edge['num_collaborations'] += 1
+        else:
+            edge = edges.get(edge_b)
+            if edge:
+                edge['num_collaborations'] += 1
+            else:
+                edges[edge_a] = {
+                    'num_collaborations': 1
+                }
+                logging.info(f"Created a edge between {str(scientist_a)} and {str(scientist_b)}")
+        return edges
+
     def compute_coauthors_network(self, request, queryset):
-        computed_scientists = []
+        nodes, edges = {}, {}
         network_name = 'CollaborationNetwork'
+        logging.info(f"Generating the network {network_name}, it might take some time...")
+        net_obj = Network(name=network_name, date=datetime.now())
         if 'is_pi_inb__exact' in request.GET.keys():
             only_inb = True
             network_name += 'INB'
         else:
             only_inb = False
+        # 0) Load to memory the data of the authorship table
+        logging.info('Loading to memory the data of the authorship table')
+        authorships = Authorship.objects.all()
+        author_authorships, article_authorships = {}, {}
+        for authorship in authorships:
+            if not author_authorships.get(authorship.author.id):
+                author_authorships[authorship.author.id] = [authorship]
+            else:
+                author_authorships[authorship.author.id].append(authorship)
+            if not article_authorships.get(authorship.artifact.id):
+                article_authorships[authorship.artifact.id] = [authorship]
+            else:
+                article_authorships[authorship.artifact.id].append(authorship)
+        # 1) Build network in memory
+        for scientist_obj in queryset:
+            nodes = self.__create_scientist_node(scientist_obj, nodes)
+            scientist_authorships = author_authorships.get(scientist_obj.id)
+            article_ids = []
+            for scientist_authorship in scientist_authorships:
+                # iterate over the scientists' articles
+                article = scientist_authorship.artifact
+                if article.id not in article_ids:
+                    article_ids.append(article.id)
+                    scientist_article_authorships = article_authorships.get(article.id)
+                    for scientist_article_authorship in scientist_article_authorships:
+                        # iterate over the article's authors
+                        author = scientist_article_authorship.author
+                        if author.id != scientist_obj.id:
+                            if only_inb:
+                                if author.is_pi_inb:  # create only nodes and edges of INB PIs
+                                    nodes = self.__create_scientist_node(scientist_obj, nodes)
+                                    edges = self.__create_update_edge(scientist_obj, author, edges)
+                            else:
+                                nodes = self.__create_scientist_node(scientist_obj, nodes)
+                                edges = self.__create_update_edge(scientist_obj, author, edges)
+        # 2) Save record into the DB
         with transaction.atomic():
-            net_obj = Network(name=network_name, date=datetime.now())
             net_obj.save()
-            for scientist_obj in queryset:
-                if not scientist_obj.is_pi_inb:  # only consider the pis of the inb as edge sources
-                    continue
-                scientist_full_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
-                computed_scientists.append(scientist_full_name)
-                node_a_obj = self.__create_update_scientist_node(scientist_obj, net_obj)
-                author_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
-                article_ids = []
-                for author_authorship in author_authorships:
-                    # iterate over articles
-                    article = author_authorship.artifact
-                    if article.id not in article_ids:
-                        article_ids.append(article.id)
-                        article_authorships = Authorship.objects.filter(artifact_id=article.id)
-                        for article_authorship in article_authorships:
-                            # iterate over article's authors
-                            author = article_authorship.author
-                            if author.id != scientist_obj.id:
-                                if only_inb:
-                                    if author.is_pi_inb:  # create only nodes and edges of INB PIs
-                                        node_b_obj = self.__create_update_scientist_node(author, net_obj)
-                                        self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
-                                else:
-                                    node_b_obj = self.__create_update_scientist_node(author, net_obj)
-                                    self.__create_update_collaboration_edge(node_a_obj, node_b_obj, net_obj)
-        computed_scientists_str = ', '.join(computed_scientists)
-        msg = f"It was computed the collaboration network of {computed_scientists_str}"
+            for node_name, node_info in nodes.items():
+                self.__insert_scientist_node(node_name, node_info, net_obj)
+            nodes_db = NetworkNode.objects.filter(network=net_obj)
+            nodes_dict = {}
+            for node_db in nodes_db:
+                nodes_dict[node_db.name] = node_db
+            for edge_tuple, edge_val in edges.items():
+                self.__insert_collaboration_edge(edge_tuple, edge_val, nodes_dict)
+        msg = f"The collaboration network was computed successfully"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_coauthors_network.short_description = 'Generate collaboration network'
 
@@ -826,7 +845,8 @@ class NetworkAdmin(admin.ModelAdmin):
 
     def export_network_into_gefx_format(self, request, queryset):
         for network_obj in queryset:
-            f_name = pathlib.Path(__file__).parents[1].joinpath('sna', 'gexf', network_obj.name+'.gexf')
+            file_name = network_obj.name + '__' + str(network_obj.date) + '.gexf'
+            f_name = pathlib.Path(__file__).parents[1].joinpath('sna', 'gexf', file_name)
 
             with open(str(f_name), 'w', encoding='utf-8') as f:
                 f.write('<?xml version="1.0" encoding="UTF-8"?>\n')
