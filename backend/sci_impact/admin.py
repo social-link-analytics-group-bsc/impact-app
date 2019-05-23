@@ -440,25 +440,58 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_as_duplicate.short_description = 'Mark as duplicate'
 
-    def __insert_collaboration_edge(self, edge_tuple, edge_val, nodes_dict):
-        node_a_obj = nodes_dict.get(edge_tuple[0])
-        node_b_obj = nodes_dict.get(edge_tuple[1])
-        edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=node_a_obj.network)
-        edge.save()
-        num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'])
-        num_collaborations_attr.save()
-        edge.attrs.add(num_collaborations_attr)
-        logging.info(f"Created a edge between {node_a_obj.name} and {node_b_obj.name}")
+    def __insert_collaboration_edges(self, edges, nodes_dict):
+        logging.info('Inserting the edges and their attributes')
+        edges_to_insert, attrs_to_insert = [], []
+        for edge_tuple, edge_val in edges.items():
+            node_a_obj = nodes_dict.get(edge_tuple[0])
+            node_b_obj = nodes_dict.get(edge_tuple[1])
+            edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=node_a_obj.network)
+            edges_to_insert.append(edge)
+            num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'])
+            attrs_to_insert.append(num_collaborations_attr)
+        inserted_edges = NetworkEdge.objects.bulk_create(edges_to_insert)
+        logging.info('Inserted edges')
+        inserted_attrs = CustomField.objects.bulk_create(attrs_to_insert)
+        logging.info('Inserted edge attributes')
+        idx_attr = 0
+        logging.info('Generating relationships between edges and attributes')
+        edge_attrs_to_insert = []
+        for inserted_edge in inserted_edges:
+            edge_attr = inserted_attrs[idx_attr]
+            edge_attrs_to_insert.append(NetworkEdge.attrs.through(networkedge_id=inserted_edge.id,
+                                                                  customfield_id=edge_attr.id))
+            idx_attr += 1
+        NetworkEdge.attrs.through.objects.bulk_create(edge_attrs_to_insert)
+        logging.info('Inserted relationship between edges and attributes')
 
-    def __insert_scientist_node(self, scientist_name, scientist_info, network_obj):
-        node_obj = NetworkNode(name=scientist_name, network=network_obj)
-        node_obj.save()
-        for attr_name, attr_info in scientist_info.items():
-            attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'])
-            attr_obj.save()
-            node_obj.attrs.add(attr_obj)
-        logging.info(f"Inserted the node {scientist_name}")
-        return node_obj
+    def __insert_scientist_nodes(self, nodes, network_obj):
+        logging.info('Inserting nodes and their attributes')
+        nodes_to_insert = []
+        attributes_to_insert = []
+        for node_name, node_info in nodes.items():
+            node_obj = NetworkNode(name=node_name, network=network_obj)
+            nodes_to_insert.append(node_obj)
+            for attr_name, attr_info in node_info.items():
+                attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'])
+                attributes_to_insert.append(attr_obj)
+        inserted_nodes = NetworkNode.objects.bulk_create(nodes_to_insert)
+        logging.info('Inserted nodes')
+        inserted_attrs = CustomField.objects.bulk_create(attributes_to_insert)
+        logging.info('Inserted node attributes')
+        num_attributes_per_node = 6
+        idx_start_attr, idx_end_attr = 0, num_attributes_per_node
+        logging.info('Creating relationship between nodes and attributes')
+        node_attrs_to_insert = []
+        for inserted_node in inserted_nodes:
+            node_attrs = inserted_attrs[idx_start_attr:idx_end_attr]
+            for inserted_attr in node_attrs:
+                node_attrs_to_insert.append(NetworkNode.attrs.through(networknode_id=inserted_node.id,
+                                                                      customfield_id=inserted_attr.id))
+            idx_start_attr += num_attributes_per_node
+            idx_end_attr += num_attributes_per_node
+        NetworkNode.attrs.through.objects.bulk_create(node_attrs_to_insert)
+        logging.info('Inserted relationship between nodes and attributes')
 
     def __create_scientist_node(self, scientist_obj, nodes):
         if str(scientist_obj) not in nodes.keys():
@@ -543,14 +576,12 @@ class ScientistAdmin(admin.ModelAdmin):
         # 2) Save record into the DB
         with transaction.atomic():
             net_obj.save()
-            for node_name, node_info in nodes.items():
-                self.__insert_scientist_node(node_name, node_info, net_obj)
+            self.__insert_scientist_nodes(nodes, net_obj)
             nodes_db = NetworkNode.objects.filter(network=net_obj)
             nodes_dict = {}
             for node_db in nodes_db:
                 nodes_dict[node_db.name] = node_db
-            for edge_tuple, edge_val in edges.items():
-                self.__insert_collaboration_edge(edge_tuple, edge_val, nodes_dict)
+            self.__insert_collaboration_edges(edges, nodes_dict)
         msg = f"The collaboration network was computed successfully"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_coauthors_network.short_description = 'Generate collaboration network'
