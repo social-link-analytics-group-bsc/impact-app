@@ -553,6 +553,8 @@ class ScientistAdmin(admin.ModelAdmin):
                 article_authorships[authorship.artifact.id].append(authorship)
         # 1) Build network in memory
         for scientist_obj in queryset:
+            #if not scientist_obj.is_pi_inb:
+            #    continue
             nodes = self.__create_scientist_node(scientist_obj, nodes)
             scientist_authorships = author_authorships.get(scientist_obj.id)
             article_ids = []
@@ -568,10 +570,10 @@ class ScientistAdmin(admin.ModelAdmin):
                         if author.id != scientist_obj.id:
                             if only_inb:
                                 if author.is_pi_inb:  # create only nodes and edges of INB PIs
-                                    nodes = self.__create_scientist_node(scientist_obj, nodes)
+                                    nodes = self.__create_scientist_node(author, nodes)
                                     edges = self.__create_update_edge(scientist_obj, author, edges)
                             else:
-                                nodes = self.__create_scientist_node(scientist_obj, nodes)
+                                nodes = self.__create_scientist_node(author, nodes)
                                 edges = self.__create_update_edge(scientist_obj, author, edges)
         # 2) Save record into the DB
         with transaction.atomic():
@@ -855,13 +857,11 @@ class NetworkAdmin(admin.ModelAdmin):
     actions = ['export_network_into_gefx_format']
 
     def num_nodes(self, obj):
-        nodes = NetworkNode.objects.filter(network=obj)
-        return len(nodes)
+        return NetworkNode.objects.filter(network=obj).count()
     num_nodes.short_description = 'Number of Nodes'
 
     def num_edges(self, obj):
-        edges = NetworkEdge.objects.filter(network=obj)
-        return len(edges)
+        return NetworkEdge.objects.filter(network=obj).count()
     num_edges.short_description = 'Number of Edges'
 
     def __convert_model_date_type_to_gefx_type(self, data_type):
