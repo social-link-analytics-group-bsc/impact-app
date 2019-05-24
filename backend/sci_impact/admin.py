@@ -67,7 +67,7 @@ class ScientistAdmin(admin.ModelAdmin):
     search_fields = ('first_name', 'last_name',)
     actions = ['compute_coauthors_network', 'get_articles_pubmed', 'identify_possible_duplicates', 'mark_as_duplicate',
                'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate', 'udpate_productivity_metrics']
-    list_filter = ('is_pi_inb', )
+    list_filter = ('is_pi_inb', 'gender',)
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -511,19 +511,24 @@ class ScientistAdmin(admin.ModelAdmin):
             logging.info(f"Created the scientist node {str(scientist_obj)}")
         return nodes
 
-    def __create_update_edge(self, scientist_a, scientist_b, edges):
+    def __create_update_edge(self, scientist_a, scientist_b, article_id, edges):
         edge_a = (str(scientist_a), str(scientist_b))
         edge_b = (str(scientist_b), str(scientist_a))
         edge = edges.get(edge_a)
         if edge:
-            edge['num_collaborations'] += 1
+            if article_id not in edge['articles']:
+                edge['articles'].append(article_id)
+                edge['num_collaborations'] += 1
         else:
             edge = edges.get(edge_b)
             if edge:
-                edge['num_collaborations'] += 1
+                if article_id not in edge['articles']:
+                    edge['articles'].append(article_id)
+                    edge['num_collaborations'] += 1
             else:
                 edges[edge_a] = {
-                    'num_collaborations': 1
+                    'num_collaborations': 1,
+                    'articles': [article_id]
                 }
                 logging.info(f"Created a edge between {str(scientist_a)} and {str(scientist_b)}")
         return edges
@@ -553,8 +558,8 @@ class ScientistAdmin(admin.ModelAdmin):
                 article_authorships[authorship.artifact.id].append(authorship)
         # 1) Build network in memory
         for scientist_obj in queryset:
-            #if not scientist_obj.is_pi_inb:
-            #    continue
+            if not scientist_obj.is_pi_inb:
+                continue
             nodes = self.__create_scientist_node(scientist_obj, nodes)
             scientist_authorships = author_authorships.get(scientist_obj.id)
             article_ids = []
@@ -564,17 +569,20 @@ class ScientistAdmin(admin.ModelAdmin):
                 if article.id not in article_ids:
                     article_ids.append(article.id)
                     scientist_article_authorships = article_authorships.get(article.id)
+                    author_ids = []
                     for scientist_article_authorship in scientist_article_authorships:
                         # iterate over the article's authors
                         author = scientist_article_authorship.author
-                        if author.id != scientist_obj.id:
-                            if only_inb:
-                                if author.is_pi_inb:  # create only nodes and edges of INB PIs
+                        if author.id not in author_ids:
+                            if author.id != scientist_obj.id:
+                                author_ids.append(author.id)
+                                if only_inb:
+                                    if author.is_pi_inb:  # create only nodes and edges of INB PIs
+                                        nodes = self.__create_scientist_node(author, nodes)
+                                        edges = self.__create_update_edge(scientist_obj, author, article.id, edges)
+                                else:
                                     nodes = self.__create_scientist_node(author, nodes)
-                                    edges = self.__create_update_edge(scientist_obj, author, edges)
-                            else:
-                                nodes = self.__create_scientist_node(author, nodes)
-                                edges = self.__create_update_edge(scientist_obj, author, edges)
+                                    edges = self.__create_update_edge(scientist_obj, author, article.id, edges)
         # 2) Save record into the DB
         with transaction.atomic():
             net_obj.save()
