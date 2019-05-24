@@ -22,6 +22,10 @@ from sci_impact.views import index
 
 schema_view = get_swagger_view(title='Impact App API')
 
+admin.site.site_header = "ImpactApp"
+admin.site.site_title = "ImpactApp Admin Portal"
+admin.site.index_title = "Welcome to ImpactApp"
+
 urlpatterns = [
     # root endpoint
     #re_path(r'', index),
