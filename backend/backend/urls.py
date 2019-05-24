@@ -14,6 +14,7 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.contrib.auth.models import User, Group
 from django.contrib import admin
 from django.urls import re_path
 from django.conf.urls import include
@@ -22,9 +23,12 @@ from sci_impact.views import index
 
 schema_view = get_swagger_view(title='Impact App API')
 
-admin.site.site_header = "ImpactApp"
+# Customize the admin site
+admin.site.site_header = " "
 admin.site.site_title = "ImpactApp Admin Portal"
 admin.site.index_title = "Welcome to ImpactApp"
+admin.site.unregister(User)
+admin.site.unregister(Group)
 
 urlpatterns = [
     # root endpoint
