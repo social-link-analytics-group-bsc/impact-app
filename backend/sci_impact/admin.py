@@ -5,6 +5,7 @@ from datetime import datetime
 from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import IntegrityError, transaction
+from django.http import HttpResponse
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge
 from similarity.jarowinkler import JaroWinkler
@@ -884,7 +885,7 @@ class NetworkAdmin(admin.ModelAdmin):
 
     def export_network_into_gefx_format(self, request, queryset):
         for network_obj in queryset:
-            file_name = network_obj.name + '__' + str(network_obj.date) + '.gexf'
+            file_name = network_obj.name + '__' + network_obj.date.strftime('%m%d%Y%H%M%S') + '.gexf'
             f_name = pathlib.Path(__file__).parents[1].joinpath('sna', 'gexf', file_name)
 
             with open(str(f_name), 'w', encoding='utf-8') as f:
