@@ -5,7 +5,6 @@ from datetime import datetime
 from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import IntegrityError, transaction
-from django.http import HttpResponse
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Venue, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge
 from similarity.jarowinkler import JaroWinkler
@@ -857,6 +856,18 @@ class ArticleAdmin(admin.ModelAdmin):
         msg = f"The information of {len(queryset)} articles were successfully exported to the file {filename}"
         self.message_user(request, msg, level=messages.SUCCESS)
     export_articles_to_csv.short_description = 'Export articles information'
+
+
+@admin.register(Authorship)
+class AuthorshipAdmin(admin.ModelAdmin):
+    list_display = ('author', 'artifact', 'first_author')
+    ordering = ('author', 'artifact')
+    search_fields = ('author__first_name', 'author__last_name', 'artifact__title')
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request) #super(AuthorshipAdmin, self).queryset(request)
+        qs = qs.distinct('author', 'artifact')
+        return qs
 
 
 @admin.register(Network)
