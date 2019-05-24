@@ -49,11 +49,18 @@ NET_TYPE = (
     ('undirected', 'Undirected'),
 )
 
+
 class Artifact(models.Model):
     title = models.CharField(max_length=300)
     year = models.IntegerField()
     url = models.URLField(null=True, blank=True)
     language = models.CharField(max_length=50, default='eng')
+
+    def __unicode__(self):
+        return f"{self.title}"
+
+    def __str__(self):
+        return self.title
 
 
 class Person(models.Model):
