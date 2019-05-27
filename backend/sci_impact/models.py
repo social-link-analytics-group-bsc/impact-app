@@ -164,11 +164,11 @@ class Scientist(Person):
     datasets = models.IntegerField(default=0)
     tools = models.IntegerField(default=0)
     # citations
-    articles_citations = models.IntegerField(default=0)
+    article_citations = models.IntegerField(default=0)
     book_citations = models.IntegerField(default=0)
     dataset_citations = models.IntegerField(default=0)
     patent_citations = models.IntegerField(default=0)
-    tools_citations = models.IntegerField(default=0)
+    tool_citations = models.IntegerField(default=0)
     total_citations = models.IntegerField(default=0)
     # productivity measure
     h_index = models.IntegerField(default=0)
@@ -292,7 +292,7 @@ class Affiliation(models.Model):
     book_citations = models.IntegerField(default=0)
     dataset_citations = models.IntegerField(default=0)
     patent_citations = models.IntegerField(default=0)
-    tools_citations = models.IntegerField(default=0)
+    tool_citations = models.IntegerField(default=0)
     total_citations = models.IntegerField(default=0)
 
     def __unicode__(self):
