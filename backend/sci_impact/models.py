@@ -288,6 +288,7 @@ class Affiliation(models.Model):
     datasets = models.IntegerField(default=0)
     tools = models.IntegerField(default=0)
     # citations
+    article_citations = models.IntegerField(default=0)
     book_citations = models.IntegerField(default=0)
     dataset_citations = models.IntegerField(default=0)
     patent_citations = models.IntegerField(default=0)
