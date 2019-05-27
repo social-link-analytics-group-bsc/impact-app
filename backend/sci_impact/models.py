@@ -53,7 +53,7 @@ NET_TYPE = (
 class Artifact(models.Model):
     title = models.CharField(max_length=300)
     year = models.IntegerField()
-    url = models.URLField(null=True, blank=True)
+    url = models.URLField(max_length=500, null=True, blank=True)
     language = models.CharField(max_length=50, default='eng')
 
     def __unicode__(self):
