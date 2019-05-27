@@ -205,7 +205,7 @@ class ScientistAdmin(admin.ModelAdmin):
             'doi': paper_doi,
             'academic_db': 'pubmed',
             'venue': venue_obj,
-            'repo_ids': id_obj,
+            'repo_id': id_obj,
             'url': paper_url
         }
         if paper_meta_data.get('Language'):
@@ -264,7 +264,7 @@ class ScientistAdmin(admin.ModelAdmin):
             if paper_doi:
                 Article.objects.get(doi=paper_doi)
             else:
-                Article.objects.get(repo_ids__value=paper_pubmed_id)
+                Article.objects.get(repo_id__value=paper_pubmed_id)
             logging.info(f"Paper already in the database!")
         except Article.DoesNotExist:
             venue_meta_data = paper['MedlineCitation']['Article']['Journal']
@@ -698,7 +698,7 @@ class ScientistAdmin(admin.ModelAdmin):
                             if paper_doi:
                                 article_obj = Article.objects.get(doi=paper_doi)
                             else:
-                                article_obj = Article.objects.get(repo_ids__value=str(paper['MedlineCitation']['PMID']))
+                                article_obj = Article.objects.get(repo_id__value=str(paper['MedlineCitation']['PMID']))
                             co_authors, _ = self.__get_co_authors(paper_authors, True)
                             total_authors = len(co_authors)
                             logging.info(f"Saving authorship of {scientist_name}")

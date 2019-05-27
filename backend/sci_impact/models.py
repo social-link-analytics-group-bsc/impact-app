@@ -194,7 +194,7 @@ class Article(Artifact):
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE)
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
     # publication id on academic repositories
-    repo_ids = models.ForeignKey(CustomField, on_delete=models.CASCADE)
+    repo_id = models.ForeignKey(CustomField, on_delete=models.CASCADE)
 
     def __unicode__(self):
         return f"{self.title}"
