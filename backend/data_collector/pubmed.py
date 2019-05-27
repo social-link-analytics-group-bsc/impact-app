@@ -1,4 +1,5 @@
 from Bio import Entrez
+from collections import defaultdict
 from django.conf import settings
 from urllib.error import HTTPError
 from data_collector.utils import get_config
@@ -89,8 +90,10 @@ class EntrezClient:
         return paper_citations
 
     def get_papers_citations(self, pm_id_list):
+        citations = defaultdict(list)
         for pm_id in pm_id_list:
-            self.get_paper_citations(pm_id)
+            citations[pm_id] = self.get_paper_citations(pm_id)
+        return citations
 
     ####
     # Caveat: It only covers journals indexes for PubMed Central
@@ -106,12 +109,17 @@ class EntrezClient:
         return paper_references
 
     def get_papers_references(self, pm_id_list):
+        references = defaultdict(list)
         for pm_id in pm_id_list:
-            self.get_paper_references(pm_id)
+            references[pm_id] = self.get_paper_references(pm_id)
+        return references
 
 
 #if __name__ == '__main__':
 #    ec = EntrezClient(False)
+#    paper_citations = ec.get_paper_citations('23202358')
+#    paper_references = ec.get_paper_references('23202358')
+#    print('done!')
     #results = ec.search('10.1074/jbc.m105766200[doi]')
 #    results = ec.fetch_in_bulk_from_list(['28666314'])
 #    print('Done!')
