@@ -536,6 +536,34 @@ class InstitutionAdmin(admin.ModelAdmin):
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
+    actions = ['remove_duplicated_affiliation']
+    search_fields = ('scientist', 'institution')
+
+    def remove_duplicated_affiliation(self, request, queryset):
+        affiliations = Affiliation.objects.all()
+        unique_affiliations = {}
+        num_duplicates = 0
+        for affiliation in affiliations:
+            scientist_institution = (affiliation.scientist.id, affiliation.institution.id)
+            if scientist_institution not in unique_affiliations.keys():
+                unique_affiliations[scientist_institution] = affiliation.id
+            else:
+                logging.info(f"Removing the duplicate of scientist {affiliation.scientist} and "
+                             f"institution {affiliation.institution}")
+                num_duplicates += 1
+                existing_affiliation = Affiliation.objects.get(id=unique_affiliations[scientist_institution])
+                if existing_affiliation.id > affiliation.id:
+                    affiliation.articles += existing_affiliation.articles
+                    affiliation.save()
+                    existing_affiliation.delete()
+                    unique_affiliations[scientist_institution] = affiliation.id
+                else:
+                    existing_affiliation.articles += affiliation.articles
+                    existing_affiliation.save()
+                    affiliation.delete()
+        msg = f"It was removed {num_duplicates} duplicated affiliations"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    remove_duplicated_affiliation.short_description = 'Remove duplicates'
 
 
 class YearFilter(MultipleChoiceListFilter):
