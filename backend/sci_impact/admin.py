@@ -1,6 +1,6 @@
 from collections import defaultdict
 from data_collector.pubmed import EntrezClient
-from datetime import datetime
+from datetime import datetime, date
 from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import transaction
@@ -536,8 +536,29 @@ class InstitutionAdmin(admin.ModelAdmin):
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
-    actions = ['remove_duplicated_affiliation']
+    actions = ['fill_join_date','remove_duplicated_affiliation']
     search_fields = ('scientist', 'institution')
+
+    def fill_join_date(self, request, queryset):
+        affiliations = Affiliation.objects.all()
+        num_affiliations = 0
+        for affiliation in affiliations:
+            num_affiliations += 1
+            aff_authorships = Authorship.objects.filter(author=affiliation.scientist,
+                                                        institution=affiliation.institution)
+            min_year = 1000000
+            max_year = -1
+            for aff_authorship in aff_authorships:
+                if aff_authorship.artifact.year < min_year:
+                    min_year = aff_authorship.artifact.year
+                if aff_authorship.artifact.year > max_year:
+                    max_year = aff_authorship.artifact.year
+            affiliation.joined_date = date(year=min_year, month=1, day=1)
+            affiliation.departure_date_date = date(year=max_year, month=1, day=1)
+            affiliation.save()
+        msg = f"It was completed {num_affiliations} affiliations"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    fill_join_date.short_description = 'Complete affiliation join date'
 
     def remove_duplicated_affiliation(self, request, queryset):
         affiliations = Affiliation.objects.all()
