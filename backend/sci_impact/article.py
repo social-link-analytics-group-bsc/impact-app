@@ -195,6 +195,7 @@ class ArticleMgm:
             else:
                 article_obj = Article.objects.get(repo_id__value=paper_pubmed_id)
             logging.info(f"Paper already in the database!")
+            return article_obj, None
         except Article.DoesNotExist:
             venue_meta_data = paper['MedlineCitation']['Article']['Journal']
             try:
@@ -304,8 +305,9 @@ class ArticleMgm:
                                     ###
                                     authorship_obj.institution = institution_obj
                                     authorship_obj.save()
-            except IntegrityError as e:
+                    return article_obj, created_objs
+            except (IntegrityError, KeyError) as e:
                 # Transaction failed, log the error and continue with the paper
                 logging.error(e)
+                return None, None
 
-        return article_obj, created_objs
