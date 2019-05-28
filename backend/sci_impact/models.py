@@ -301,6 +301,9 @@ class Affiliation(models.Model):
     def __str__(self):
         return f"{self.scientist.last_name}, {self.scientist.first_name}, {self.institution.name}"
 
+    class Meta:
+        unique_together = ('scientist', 'institution')
+
 
 class Network(models.Model):
     name = models.CharField(max_length=200)
