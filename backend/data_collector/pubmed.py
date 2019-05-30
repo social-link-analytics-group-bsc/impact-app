@@ -6,12 +6,10 @@ from data_collector.utils import get_config
 
 
 import logging
-import pathlib
 import time
 
 
-logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
-                    level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class EntrezClient:
@@ -44,7 +42,7 @@ class EntrezClient:
         num_results_to_fetch = int(num_results_to_fetch)
         for start in range(0, num_results_to_fetch, batch_size):
             end = min(num_results_to_fetch, start + batch_size)
-            logging.info(f"Downloading records from {start + 1} to {end}")
+            logger.info(f"Downloading records from {start + 1} to {end}")
             attempt = 0
             while attempt < MAX_ATTEMPTS:
                 attempt += 1
@@ -55,8 +53,8 @@ class EntrezClient:
                                                   query_key=query_key)
                 except HTTPError as err:
                     if 500 <= err.code <= 599:
-                        logging.error(f"Received error from server {err}")
-                        logging.error(f"Attempt {attempt} of {MAX_ATTEMPTS}")
+                        logger.error(f"Received error from server {err}")
+                        logger.error(f"Attempt {attempt} of {MAX_ATTEMPTS}")
                         time.sleep(15)
                     else:
                         raise
