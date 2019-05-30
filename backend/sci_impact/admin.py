@@ -4,10 +4,11 @@ from datetime import datetime, date
 from django_admin_multiple_choice_list_filter.list_filters import MultipleChoiceListFilter
 from django.contrib import admin, messages
 from django.db import transaction
+from django.http import HttpResponse
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
-from sci_impact.tasks import get_citations, mark_articles_of_inb_pis
+from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -19,6 +20,7 @@ import re
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
+
 
 
 @admin.register(Country)
@@ -61,16 +63,47 @@ class CountryAdmin(admin.ModelAdmin):
 
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
-    list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'articles', 'articles_as_first_author',
-                    'articles_as_last_author','article_citations', 'total_citations')
+    list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'affiliations', 'articles',
+                    'articles_as_first_author', 'articles_as_last_author','article_citations', 'total_citations')
     ordering = ('last_name', 'articles', 'articles_as_first_author', 'articles_as_last_author')
     search_fields = ('first_name', 'last_name',)
-    actions = ['compute_coauthors_network', 'get_articles_pubmed', 'identify_possible_duplicates', 'mark_as_duplicate',
-               'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate', 'udpate_productivity_metrics']
+    actions = ['compute_coauthors_network', 'export_as_csv', 'get_articles_pubmed', 'identify_possible_duplicates',
+               'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate',
+               'udpate_productivity_metrics']
     list_filter = ('is_pi_inb', 'gender',)
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
+
+    def __get_scientist_affiliations(self, obj):
+        all_affiliations = obj.affiliation_set.all().order_by('-departure_date')
+        if len(all_affiliations) > 0:
+            max_year = all_affiliations[0].departure_date.year
+            affiliations_max_year = obj.affiliation_set.filter(departure_date__year=max_year)
+            affiliations = []
+            for affiliation in affiliations_max_year:
+                affiliations.append(affiliation.institution.name)
+            return ', '.join(affiliations)
+        else:
+            return '-'
+
+    def export_as_csv(self, request, queryset):
+        meta = self.model._meta
+        field_names = ['first_name', 'last_name', 'gender', 'articles', 'affiliations']
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        writer = csv.writer(response)
+        writer.writerow(field_names)
+        for obj in queryset:
+            info_to_write = [obj.first_name, obj.last_name, obj.gender, obj.articles]
+            info_to_write.append(self.__get_scientist_affiliations(obj))
+            writer.writerow(info_to_write)
+        return response
+    export_as_csv.short_description = "Export Selected as CSV"
+
+    def affiliations(self, obj):
+        return self.__get_scientist_affiliations(obj)
+    affiliations.short_description = 'Last affiliations'
 
     def __display_feedback_msg(self, request):
         if self.objs_created:
@@ -536,27 +569,15 @@ class InstitutionAdmin(admin.ModelAdmin):
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
-    actions = ['fill_join_date','remove_duplicated_affiliation']
+    actions = ['fill_join_date', 'remove_duplicated_affiliation']
     search_fields = ('scientist', 'institution')
 
     def fill_join_date(self, request, queryset):
-        affiliations = Affiliation.objects.all()
-        num_affiliations = 0
-        for affiliation in affiliations:
-            num_affiliations += 1
-            aff_authorships = Authorship.objects.filter(author=affiliation.scientist,
-                                                        institution=affiliation.institution)
-            min_year = 1000000
-            max_year = -1
-            for aff_authorship in aff_authorships:
-                if aff_authorship.artifact.year < min_year:
-                    min_year = aff_authorship.artifact.year
-                if aff_authorship.artifact.year > max_year:
-                    max_year = aff_authorship.artifact.year
-            affiliation.joined_date = date(year=min_year, month=1, day=1)
-            affiliation.departure_date_date = date(year=max_year, month=1, day=1)
-            affiliation.save()
-        msg = f"It was completed {num_affiliations} affiliations"
+        affiliation_ids = []
+        for affiliation in queryset:
+            affiliation_ids.append(affiliation.id)
+        fill_affiliation_join_date.delay(affiliation_ids)
+        msg = f"The process has started, please refer to the log files for updates on the process"
         self.message_user(request, msg, level=messages.SUCCESS)
     fill_join_date.short_description = 'Complete affiliation join date'
 
@@ -604,7 +625,7 @@ class ArticleAdmin(admin.ModelAdmin):
     list_display = ('title', 'year', 'doi', 'authors', 'num_citations', 'url')
     ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
-    list_filter = (YearFilter, )
+    list_filter = (YearFilter, 'inb_pi_as_author')
     actions = ['export_articles_to_csv', 'get_citations', 'mark_articles_of_inb_pis']
 
     def authors(self, obj):
@@ -644,7 +665,10 @@ class ArticleAdmin(admin.ModelAdmin):
     def get_citations(self, request, queryset):
         article_ids = []
         for article in queryset:
-            article_ids.append(article.id)
+            num_citations = self.num_citations(article)
+            # get the citations of articles that we haven't registered any citation already
+            if num_citations == 0:
+                article_ids.append(article.id)
         get_citations.delay(article_ids)
         msg = f"The process of collecting citations has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
