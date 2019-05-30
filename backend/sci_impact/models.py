@@ -195,6 +195,8 @@ class Article(Artifact):
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
     # publication id on academic repositories
     repo_id = models.ForeignKey(CustomField, on_delete=models.CASCADE)
+    # other fields
+    inb_pi_as_author = models.BooleanField(default=False)
 
     def __unicode__(self):
         return f"{self.title}"
