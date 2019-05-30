@@ -4,14 +4,11 @@ from data_collector.utils import get_gender, curate_text
 from datetime import date
 
 import logging
-import pathlib
 import requests
 import re
 
 
-logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
-                    level=logging.DEBUG)
-logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
+logger = logging.getLogger(__name__)
 
 
 class ArticleMgm:
@@ -187,7 +184,7 @@ class ArticleMgm:
         article_obj = None
         created_objs = {}
         paper_meta_data = paper['MedlineCitation']['Article']
-        logging.info(f"[{num_paper}] Processing paper {paper_meta_data['ArticleTitle']}")
+        logger.info(f"[{num_paper}] Processing paper {paper_meta_data['ArticleTitle']}")
         paper_doi = self.get_paper_doi(paper)
         paper_pubmed_id = str(paper['MedlineCitation']['PMID'])
         try:
@@ -195,7 +192,7 @@ class ArticleMgm:
                 article_obj = Article.objects.get(doi=paper_doi)
             else:
                 article_obj = Article.objects.get(repo_id__value=paper_pubmed_id)
-            logging.info(f"Paper already in the database!")
+            logger.info(f"Paper already in the database!")
             return article_obj, None
         except Article.DoesNotExist:
             venue_meta_data = paper['MedlineCitation']['Article']['Journal']
@@ -256,6 +253,9 @@ class ArticleMgm:
                             if index == (total_authors - 1):
                                 author_obj.articles_as_last_author += 1
                             author_obj.save()
+                            if author_obj.is_pi_inb:
+                                article_obj.inb_pi_as_author = True
+                                article_obj.save()
                             ###
                             # 5) Create/Retrieve article's authorship
                             ###
@@ -326,6 +326,6 @@ class ArticleMgm:
                     return article_obj, created_objs
             except (IntegrityError, KeyError) as e:
                 # Transaction failed, log the error and continue with the paper
-                logging.error(e)
+                logger.error(e)
                 return None, None
 
