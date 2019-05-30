@@ -1,11 +1,11 @@
+from celery.utils.log import get_task_logger
 from celery import shared_task
 from data_collector.pubmed import EntrezClient
 from sci_impact.article import ArticleMgm
 from sci_impact.models import ArtifactCitation, Affiliation, Article
 
-import logging
 
-logger = logging.getLogger(__name__)
+logger = get_task_logger(__name__)
 
 
 @shared_task
@@ -64,11 +64,12 @@ def get_citations(article_ids):
 
 
 @shared_task
-def mark_articles_of_inb_pis(self, article_ids):
+def mark_articles_of_inb_pis(article_ids):
     for article_id in article_ids:
         article_obj = Article.objects.get(id=article_id)
-        authors = article_obj.authorship_set.all()
-        for author_obj in authors:
+        authorships = article_obj.authorship_set.all()
+        for authorship in authorships:
+            author_obj = authorship.author
             if author_obj.is_pi_inb:
                 logger.info(f"The article {article_obj} has the INB PI {author_obj} as one of the co-authors")
                 article_obj.inb_pi_as_author = True
