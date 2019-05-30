@@ -17,9 +17,8 @@ import pathlib
 import requests
 import re
 
-logging.basicConfig(filename=str(pathlib.Path(__file__).parents[1].joinpath('impact_app.log')),
-                    level=logging.DEBUG)
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
+logger = logging.getLogger(__name__)
 
 
 @admin.register(Country)
@@ -54,7 +53,7 @@ class CountryAdmin(admin.ModelAdmin):
                         alternative_names.add(name)
             list_alt_names = [alt_name for alt_name in alternative_names if alt_name]
             alt_names_str = ', '.join(list_alt_names)
-            logging.info(f"Creating country: {country_name}")
+            logger.info(f"Creating country: {country_name}")
             Country.objects.update_or_create(name=country_name, iso_code=country_iso_code,
                                              defaults={'alternative_names': alt_names_str})
     load_countries.short_description = 'Load list of countries'
@@ -97,7 +96,7 @@ class ScientistAdmin(admin.ModelAdmin):
         am = ArticleMgm()
         for scientist_obj in queryset:
             scientist_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
-            logging.info(f"Getting articles of {scientist_name}")
+            logger.info(f"Getting articles of {scientist_name}")
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
@@ -171,7 +170,7 @@ class ScientistAdmin(admin.ModelAdmin):
     mark_as_duplicate.short_description = 'Mark as duplicate'
 
     def __insert_collaboration_edges(self, edges, nodes_dict):
-        logging.info('Inserting the edges and their attributes')
+        logger.info('Inserting the edges and their attributes')
         edges_to_insert, attrs_to_insert = [], []
         for edge_tuple, edge_val in edges.items():
             node_a_obj = nodes_dict.get(edge_tuple[0])
@@ -181,11 +180,11 @@ class ScientistAdmin(admin.ModelAdmin):
             num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'])
             attrs_to_insert.append(num_collaborations_attr)
         inserted_edges = NetworkEdge.objects.bulk_create(edges_to_insert)
-        logging.info('Inserted edges')
+        logger.info('Inserted edges')
         inserted_attrs = CustomField.objects.bulk_create(attrs_to_insert)
-        logging.info('Inserted edge attributes')
+        logger.info('Inserted edge attributes')
         idx_attr = 0
-        logging.info('Generating relationships between edges and attributes')
+        logger.info('Generating relationships between edges and attributes')
         edge_attrs_to_insert = []
         for inserted_edge in inserted_edges:
             edge_attr = inserted_attrs[idx_attr]
@@ -193,10 +192,10 @@ class ScientistAdmin(admin.ModelAdmin):
                                                                   customfield_id=edge_attr.id))
             idx_attr += 1
         NetworkEdge.attrs.through.objects.bulk_create(edge_attrs_to_insert)
-        logging.info('Inserted relationship between edges and attributes')
+        logger.info('Inserted relationship between edges and attributes')
 
     def __insert_scientist_nodes(self, nodes, network_obj):
-        logging.info('Inserting nodes and their attributes')
+        logger.info('Inserting nodes and their attributes')
         nodes_to_insert = []
         attributes_to_insert = []
         for node_name, node_info in nodes.items():
@@ -206,12 +205,12 @@ class ScientistAdmin(admin.ModelAdmin):
                 attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'])
                 attributes_to_insert.append(attr_obj)
         inserted_nodes = NetworkNode.objects.bulk_create(nodes_to_insert)
-        logging.info('Inserted nodes')
+        logger.info('Inserted nodes')
         inserted_attrs = CustomField.objects.bulk_create(attributes_to_insert)
-        logging.info('Inserted node attributes')
+        logger.info('Inserted node attributes')
         num_attributes_per_node = 6
         idx_start_attr, idx_end_attr = 0, num_attributes_per_node
-        logging.info('Creating relationship between nodes and attributes')
+        logger.info('Creating relationship between nodes and attributes')
         node_attrs_to_insert = []
         for inserted_node in inserted_nodes:
             node_attrs = inserted_attrs[idx_start_attr:idx_end_attr]
@@ -221,7 +220,7 @@ class ScientistAdmin(admin.ModelAdmin):
             idx_start_attr += num_attributes_per_node
             idx_end_attr += num_attributes_per_node
         NetworkNode.attrs.through.objects.bulk_create(node_attrs_to_insert)
-        logging.info('Inserted relationship between nodes and attributes')
+        logger.info('Inserted relationship between nodes and attributes')
 
     def __create_scientist_node(self, scientist_obj, nodes):
         if str(scientist_obj) not in nodes.keys():
@@ -238,7 +237,7 @@ class ScientistAdmin(admin.ModelAdmin):
                 'inb_pi_collaborator': {'value': pi_collaborator_full_name, 'type': 'str'}
             }
             nodes[str(scientist_obj)] = scientist_dict
-            logging.info(f"Created the scientist node {str(scientist_obj)}")
+            logger.info(f"Created the scientist node {str(scientist_obj)}")
         return nodes
 
     def __create_update_edge(self, scientist_a, scientist_b, article_id, edges):
@@ -260,13 +259,13 @@ class ScientistAdmin(admin.ModelAdmin):
                     'num_collaborations': 1,
                     'articles': [article_id]
                 }
-                logging.info(f"Created a edge between {str(scientist_a)} and {str(scientist_b)}")
+                logger.info(f"Created a edge between {str(scientist_a)} and {str(scientist_b)}")
         return edges
 
     def compute_coauthors_network(self, request, queryset):
         nodes, edges = {}, {}
         network_name = 'CollaborationNetwork'
-        logging.info(f"Generating the network {network_name}, it might take some time...")
+        logger.info(f"Generating the network {network_name}, it might take some time...")
         net_obj = Network(name=network_name, date=datetime.now())
         if 'is_pi_inb__exact' in request.GET.keys():
             only_inb = True
@@ -274,7 +273,7 @@ class ScientistAdmin(admin.ModelAdmin):
         else:
             only_inb = False
         # 0) Load to memory the data of the authorship table
-        logging.info('Loading to memory the data of the authorship table')
+        logger.info('Loading to memory the data of the authorship table')
         authorships = Authorship.objects.all()
         author_authorships, article_authorships = {}, {}
         for authorship in authorships:
@@ -328,7 +327,7 @@ class ScientistAdmin(admin.ModelAdmin):
 
     def obtain_pi_collaborator(self, request, queryset):
         for scientist_obj in queryset:
-            logging.info(f"Obtaining the pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name}")
+            logger.info(f"Obtaining the pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name}")
             if scientist_obj.most_recent_pi_inb_collaborator:
                 continue
             if scientist_obj.is_pi_inb:
@@ -373,7 +372,7 @@ class ScientistAdmin(admin.ModelAdmin):
                             if collaboration_info['year_last_collaboration'] > inb_pi_collaborator['year_last_collaboration']:
                                 inb_pi_collaborator = collaboration_info
                 if inb_pi_collaborator:
-                    logging.info(f"The pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name} is "
+                    logger.info(f"The pi collaborator of {scientist_obj.first_name + ' ' + scientist_obj.last_name} is "
                                  f"{inb_pi_collaborator['scientist_obj'].first_name + ' ' +  inb_pi_collaborator['scientist_obj'].last_name}")
                     scientist_obj.most_recent_pi_inb_collaborator = inb_pi_collaborator['scientist_obj']
                     scientist_obj.save()
@@ -384,7 +383,7 @@ class ScientistAdmin(admin.ModelAdmin):
             scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
             if not scientist_authorships:
                 num_scientists_without_authorship += 1
-                logging.info(f"The scientist {scientist_obj.id} doesn't have authorship")
+                logger.info(f"The scientist {scientist_obj.id} doesn't have authorship")
         msg = f"Out of the {len(queryset)} scientists selected, " \
               f"{num_scientists_without_authorship} do not have authorship"
         self.message_user(request, msg, level=messages.SUCCESS)
@@ -418,7 +417,7 @@ class ScientistAdmin(admin.ModelAdmin):
             if not scientist_authorships:
                 scientists_without_authorship += 1
                 scientist_name = scientist_obj.first_name + ' ' + scientist_obj.last_name
-                logging.info(f"Getting articles of {scientist_name}")
+                logger.info(f"Getting articles of {scientist_name}")
                 results = ec.search(f"{scientist_name}[author]", use_history=False, batch_size=500)
                 if len(results['IdList']) > 0:
                     papers = ec.fetch_in_bulk_from_list(results['IdList'])
@@ -432,13 +431,13 @@ class ScientistAdmin(admin.ModelAdmin):
                                 article_obj = Article.objects.get(repo_id__value=str(paper['MedlineCitation']['PMID']))
                             co_authors, _ = self.__get_co_authors(paper_authors, am, True)
                             total_authors = len(co_authors)
-                            logging.info(f"Saving authorship of {scientist_name}")
+                            logger.info(f"Saving authorship of {scientist_name}")
                             for index, co_author in enumerate(co_authors):
                                 authorship_objs = Authorship.objects.filter(author=co_author, artifact=article_obj)
                                 if len(authorship_objs) == 0:
                                     am.create_update_authorship(co_author, index, total_authors, article_obj)
                                     new_authorship += 1
-                                    logging.info(f"New authorship created!")
+                                    logger.info(f"New authorship created!")
                                     co_author.articles += 1
                                     if index == 0:
                                         co_author.articles_as_first_author += 1
@@ -448,7 +447,7 @@ class ScientistAdmin(admin.ModelAdmin):
                         except Article.DoesNotExist:
                             _, inb_pi_within_authors = self.__get_co_authors(paper_authors, am)
                             if inb_pi_within_authors:
-                                logging.info(f"Found a paper that doesn't exist in the database but has the INB PI "
+                                logger.info(f"Found a paper that doesn't exist in the database but has the INB PI "
                                              f"{inb_pi_within_authors.last_name + ' ' + inb_pi_within_authors.first_name} "
                                              f"as one of the authors")
                                 am.process_paper(i, paper)
@@ -462,7 +461,7 @@ class ScientistAdmin(admin.ModelAdmin):
         all_scientists = Scientist.objects.order_by('last_name')
         min_score_last_name_similarity = 0.95
         min_score_first_name_similarity = 0.75
-        logging.info("Detecting possible duplicates, it might take some time, please wait...")
+        logger.info("Detecting possible duplicates, it might take some time, please wait...")
         for scientist_obj in queryset:
             if scientist_obj.possible_duplicate:
                 continue
@@ -508,7 +507,7 @@ class ScientistAdmin(admin.ModelAdmin):
         for scientist_obj in queryset:
             scientist_production = {'articles': 0, 'articles_as_first_author': 0, 'articles_as_last_author': 0}
             articles = []
-            logging.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
+            logger.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
             scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
             for scientist_authorship in scientist_authorships:
                 if scientist_authorship.artifact_id not in articles:
@@ -570,7 +569,7 @@ class AffiliationAdmin(admin.ModelAdmin):
             if scientist_institution not in unique_affiliations.keys():
                 unique_affiliations[scientist_institution] = affiliation.id
             else:
-                logging.info(f"Removing the duplicate of scientist {affiliation.scientist} and "
+                logger.info(f"Removing the duplicate of scientist {affiliation.scientist} and "
                              f"institution {affiliation.institution}")
                 num_duplicates += 1
                 existing_affiliation = Affiliation.objects.get(id=unique_affiliations[scientist_institution])
@@ -626,7 +625,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
     def export_articles_to_csv(self, request, queryset):
         filename = 'articles.csv'
-        logging.info(f"Exporting {len(queryset)} articles")
+        logger.info(f"Exporting {len(queryset)} articles")
         with open('articles.csv', 'w', encoding='utf-8') as f:
             headers = ['title', 'year', 'doi']
             writer = csv.DictWriter(f, fieldnames=headers)
@@ -650,6 +649,16 @@ class ArticleAdmin(admin.ModelAdmin):
         msg = f"The process of collecting citations has started, follow the log to get updates about the collection"
         self.message_user(request, msg, level=messages.SUCCESS)
     get_citations.short_description = 'Get citations'
+
+    def mark_articles_of_inb_pis(self, request, queryset):
+        for article in queryset:
+            authors = article.authorship_set.all()
+            for author in authors:
+                if author.is_pi_inb:
+                    logger.info(f"The article {article} has the INB PI {author} as one of the co-authors")
+                    article.inb_pi_as_author = True
+                    article.save()
+                    break
 
 
 @admin.register(Authorship)
