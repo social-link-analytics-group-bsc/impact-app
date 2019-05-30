@@ -7,6 +7,7 @@ from django.db import transaction
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
+from sci_impact.tasks import get_citations
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -601,8 +602,8 @@ class YearFilter(MultipleChoiceListFilter):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'year', 'doi', 'authors', 'url')
-    ordering = ('year', 'title')
+    list_display = ('title', 'year', 'doi', 'authors', 'num_citations', 'url')
+    ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
     list_filter = (YearFilter, )
     actions = ['export_articles_to_csv', 'get_citations']
@@ -618,6 +619,10 @@ class ArticleAdmin(admin.ModelAdmin):
                 author_ids.append(author.id)
                 authors.append(author_name)
         return ', '.join(list(authors))
+
+    def num_citations(self, obj):
+        return ArtifactCitation.objects.filter(to_artifact=obj).count()
+    num_citations.short_description = 'Citations'
 
     def export_articles_to_csv(self, request, queryset):
         filename = 'articles.csv'
@@ -638,52 +643,11 @@ class ArticleAdmin(admin.ModelAdmin):
     export_articles_to_csv.short_description = 'Export articles information'
 
     def get_citations(self, request, queryset):
-        ec = EntrezClient()
-        am = ArticleMgm()
-        citation_objs = []
-        for article_obj in queryset:
-            saved_citation_author, saved_citation_authorship = False, False
-            authorships = article_obj.authorship_set.all()
-            logging.info(f"Getting the citations of the paper {article_obj.title}")
-            repo_id = article_obj.repo_id.value
-            paper_citations = ec.get_paper_citations(repo_id)
-            if paper_citations:
-                logging.info(f"Found {len(paper_citations)} citations for the paper")
-                for i, paper_citation in enumerate(paper_citations):
-                    article_citation_obj, created_objs = am.process_paper(i, paper_citation)
-                    if article_citation_obj:
-                        with transaction.atomic():
-                            try:
-                                ArtifactCitation.objects.get(from_artifact=article_citation_obj, to_artifact=article_obj)
-                                logging.info('Citation already exists!')
-                            except ArtifactCitation.DoesNotExist:
-                                # 1) Create citation
-                                citation_obj = ArtifactCitation(from_artifact=article_citation_obj, to_artifact=article_obj)
-                                citation_obj.save()
-                                citation_objs.append(citation_obj)
-                                logging.info('Citation created!')
-                                # 2) Update scientist citation metrics
-                                for authorship in authorships:
-                                    author = authorship.author
-                                    author.article_citations += 1
-                                    author.total_citations += 1
-                                    if not saved_citation_author:
-                                        author.articles_with_citations += 1
-                                        saved_citation_author = True
-                                    author.save()
-                                    # 3) Update affiliation citation metrics
-                                    affiliations = Affiliation.objects.filter(scientist=author,
-                                                                              institution=authorship.institution)
-                                    for affiliation in affiliations:
-                                        affiliation.article_citations += 1
-                                        affiliation.total_citations += 1
-                                        if not saved_citation_authorship:
-                                            affiliation.articles_with_citations += 1
-                                            saved_citation_authorship = True
-                                        affiliation.save()
-            else:
-                logging.info(f"Could not find citations for the paper")
-        msg = f"It was created {len(citation_objs)} citations"
+        article_ids = []
+        for article in queryset:
+            article_ids.append(article.id)
+        get_citations.delay(article_ids)
+        msg = f"The process of collecting citations has started, follow the log to get updates about the collection"
         self.message_user(request, msg, level=messages.SUCCESS)
     get_citations.short_description = 'Get citations'
 
