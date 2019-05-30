@@ -7,7 +7,7 @@ from django.db import transaction
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
-from sci_impact.tasks import get_citations
+from sci_impact.tasks import get_citations, mark_articles_of_inb_pis
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -605,7 +605,7 @@ class ArticleAdmin(admin.ModelAdmin):
     ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
     list_filter = (YearFilter, )
-    actions = ['export_articles_to_csv', 'get_citations']
+    actions = ['export_articles_to_csv', 'get_citations', 'mark_articles_of_inb_pis']
 
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
@@ -646,19 +646,19 @@ class ArticleAdmin(admin.ModelAdmin):
         for article in queryset:
             article_ids.append(article.id)
         get_citations.delay(article_ids)
-        msg = f"The process of collecting citations has started, follow the log to get updates about the collection"
+        msg = f"The process of collecting citations has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
     get_citations.short_description = 'Get citations'
 
     def mark_articles_of_inb_pis(self, request, queryset):
+        logger.info('Starting the process...')
+        article_ids = []
         for article in queryset:
-            authors = article.authorship_set.all()
-            for author in authors:
-                if author.is_pi_inb:
-                    logger.info(f"The article {article} has the INB PI {author} as one of the co-authors")
-                    article.inb_pi_as_author = True
-                    article.save()
-                    break
+            article_ids.append(article.id)
+        mark_articles_of_inb_pis.delay(article_ids)
+        msg = f"The process has started, please refer to the log to get updates about it"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    mark_articles_of_inb_pis.short_description = "Mark INB PIs' articles"
 
 
 @admin.register(Authorship)
