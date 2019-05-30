@@ -1,8 +1,9 @@
 from celery.utils.log import get_task_logger
 from celery import shared_task
 from data_collector.pubmed import EntrezClient
+from datetime import date
 from sci_impact.article import ArticleMgm
-from sci_impact.models import ArtifactCitation, Affiliation, Article
+from sci_impact.models import ArtifactCitation, Affiliation, Article, Authorship
 
 
 logger = get_task_logger(__name__)
@@ -75,3 +76,29 @@ def mark_articles_of_inb_pis(article_ids):
                 article_obj.inb_pi_as_author = True
                 article_obj.save()
                 break
+
+@shared_task
+def fill_affiliation_join_date(affiliation_ids):
+    num_affiliations, deleted_affiliations = 0, 0
+    for affiliation_id in affiliation_ids:
+        affiliation = Affiliation.objects.get(id=affiliation_id)
+        logger.info(f"Processing affiliation: {affiliation}")
+        num_affiliations += 1
+        aff_authorships = Authorship.objects.filter(author=affiliation.scientist,
+                                                    institution=affiliation.institution)
+        min_year = 1000000
+        max_year = -1
+        if len(aff_authorships) > 0:
+            for aff_authorship in aff_authorships:
+                if aff_authorship.artifact.year < min_year:
+                    min_year = aff_authorship.artifact.year
+                if aff_authorship.artifact.year > max_year:
+                    max_year = aff_authorship.artifact.year
+            affiliation.joined_date = date(year=min_year, month=1, day=1)
+            affiliation.departure_date = date(year=max_year, month=1, day=1)
+            affiliation.save()
+        else:
+            deleted_affiliations += 1
+            affiliation.delete()
+    logger.info(f"It was completed {num_affiliations} affiliations")
+    logger.info(f"{deleted_affiliations} affiliations were deleted because they don't any authorship associated")
