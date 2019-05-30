@@ -1,7 +1,6 @@
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from data_collector.pubmed import EntrezClient
-from django.db import transaction
 from sci_impact.article import ArticleMgm
 from sci_impact.models import ArtifactCitation, Affiliation, Article
 
