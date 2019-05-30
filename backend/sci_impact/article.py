@@ -1,6 +1,7 @@
 from django.db import IntegrityError, transaction
 from sci_impact.models import Affiliation, Article, Authorship, Country, CustomField, Institution, Scientist, Venue
 from data_collector.utils import get_gender, curate_text
+from datetime import date
 
 import logging
 import pathlib
@@ -295,6 +296,23 @@ class ArticleMgm:
                                     )
                                     if created:
                                         created_objs['Institution'].append(affiliation_obj)
+                                        affiliation_obj.joined_date = date(year=article_obj.year, month=1, day=1)
+                                        affiliation_obj.departure_date = date(year=article_obj.year, month=1, day=1)
+                                        affiliation_obj.save()
+                                    else:
+                                        if affiliation_obj.joined_date:
+                                            if affiliation_obj.joined_date.year > article_obj.year:
+                                                affiliation_obj.joined_date = date(year=article_obj.year, month=1,
+                                                                                   day=1)
+                                        else:
+                                            affiliation_obj.joined_date = date(year=article_obj.year, month=1, day=1)
+                                        if affiliation_obj.departure_date:
+                                            if affiliation_obj.departure_date.year < article_obj.year:
+                                                affiliation_obj.departure_date = date(year=article_obj.year, month=1,
+                                                                                      day=1)
+                                        else:
+                                            affiliation_obj.departure_date = date(year=article_obj.year, month=1, day=1)
+                                        affiliation_obj.save()
                                     # Update affiliation metrics
                                     affiliation_obj.articles += 1
                                     if index == 0:
