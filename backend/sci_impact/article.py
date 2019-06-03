@@ -146,7 +146,7 @@ class ArticleMgm:
             for country in country_dict['names']:
                 if aff_str.lower().strip() == country.lower():
                     return country, country_dict['iso_code']
-        return ''
+        return '', ''
 
     def __is_countryand_case(self, aff_str):
         aff_str = aff_str.lower().strip()
@@ -155,7 +155,7 @@ class ArticleMgm:
                 country_and_case = country.lower() + ' and '
                 if aff_str.find(country_and_case) == 0:
                     return country, country_dict['iso_code']
-        return ''
+        return '', ''
 
     def __get_affiliations(self, affiliation):
         regex = re.compile('[,;]+')
@@ -164,13 +164,13 @@ class ArticleMgm:
         affiliation = curate_text(affiliation)
         aff_array = regex.split(affiliation)
         for aff in aff_array:
-            found_country = self.__which_country(aff)
+            found_country, _ = self.__which_country(aff)
             if found_country:
                 current_affiliation.append(found_country[0])
                 affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
                 current_affiliation = []
             else:
-                found_country = self.__is_countryand_case(aff)
+                found_country, _ = self.__is_countryand_case(aff)
                 if found_country:
                     current_affiliation.append(found_country[0])
                     affiliations.append({'name': ', '.join(current_affiliation), 'country_iso_code': found_country[1]})
@@ -275,8 +275,11 @@ class ArticleMgm:
                                     # 6) Create/Retrieve institution
                                     ###
                                     institution_name = institution['name']
-                                    institution_country_obj = Country.objects.get(
-                                        iso_code=institution['country_iso_code'])
+                                    try:
+                                        institution_country_obj = Country.objects.get(
+                                            iso_code=institution['country_iso_code'])
+                                    except Country.DoesNotExist:
+                                        institution_country_obj = None
                                     try:
                                         institution_obj = Institution.objects.get(
                                             name__iexact=institution_name,
