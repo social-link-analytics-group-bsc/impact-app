@@ -82,7 +82,7 @@ class EntrezClient:
             handle = self.__entrez.elink(dbfrom='pmc', db='pubmed', LinkName='pmc_pubmed', id=','.join(pmc_ids))
             results_pm = self.__entrez.read(handle)
             handle.close()
-            if len(results_pmc[0]['LinkSetDb']) > 0:
+            if len(results_pm[0]['LinkSetDb']) > 0:
                 paper_citation_pm_ids = [link['Id'] for link in results_pm[0]['LinkSetDb'][0]['Link']]
                 paper_citations = self.fetch_in_bulk_from_list(paper_citation_pm_ids)
         return paper_citations
@@ -115,7 +115,7 @@ class EntrezClient:
 
 #if __name__ == '__main__':
 #    ec = EntrezClient(False)
-#    paper_citations = ec.get_paper_citations('23202358')
+#    paper_citations = ec.get_paper_citations('28423789')
 #    paper_references = ec.get_paper_references('23202358')
 #    print('done!')
     #results = ec.search('10.1074/jbc.m105766200[doi]')
