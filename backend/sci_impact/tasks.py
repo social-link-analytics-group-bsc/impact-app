@@ -61,7 +61,7 @@ def get_citations(article_ids):
                                 affiliation.save()
         else:
             logger.info(f"Could not find citations for the paper")
-    logger.info(f"It was create {num_citations} citations")
+    logger.info(f"The process has finished! It was created {num_citations} citations")
 
 
 @shared_task
