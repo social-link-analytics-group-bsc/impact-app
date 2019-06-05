@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
-from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date
+from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -626,7 +626,7 @@ class ArticleAdmin(admin.ModelAdmin):
     ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
     list_filter = (YearFilter, 'inb_pi_as_author')
-    actions = ['export_articles_to_csv', 'get_citations', 'mark_articles_of_inb_pis']
+    actions = ['export_articles_to_csv', 'get_citations', 'get_references', 'mark_articles_of_inb_pis']
 
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
@@ -665,14 +665,20 @@ class ArticleAdmin(admin.ModelAdmin):
     def get_citations(self, request, queryset):
         article_ids = []
         for article in queryset:
-            num_citations = self.num_citations(article)
-            # get the citations of articles that we haven't registered any citation already
-            if num_citations == 0:
-                article_ids.append(article.id)
+            article_ids.append(article.id)
         get_citations.delay(article_ids)
         msg = f"The process of collecting citations has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
     get_citations.short_description = 'Get citations'
+
+    def get_references(self, request, queryset):
+        article_ids = []
+        for article in queryset:
+            article_ids.append(article.id)
+        get_references.delay(article_ids)
+        msg = f"The process of collecting references has started, please refer to the log to get updates about it"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    get_references.short_description = 'Get references'
 
     def mark_articles_of_inb_pis(self, request, queryset):
         logger.info('Starting the process...')
