@@ -622,7 +622,7 @@ class YearFilter(MultipleChoiceListFilter):
 
 @admin.register(Article)
 class ArticleAdmin(admin.ModelAdmin):
-    list_display = ('title', 'year', 'doi', 'authors', 'num_citations', 'url')
+    list_display = ('title', 'year', 'doi', 'authors', 'num_citations', 'num_references', 'url')
     ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
     list_filter = (YearFilter, 'inb_pi_as_author')
@@ -643,6 +643,10 @@ class ArticleAdmin(admin.ModelAdmin):
     def num_citations(self, obj):
         return ArtifactCitation.objects.filter(to_artifact=obj).count()
     num_citations.short_description = 'Citations'
+
+    def num_references(self, obj):
+        return ArtifactCitation.objects.filter(from_artifact=obj).count()
+    num_references.short_description = 'References'
 
     def export_articles_to_csv(self, request, queryset):
         filename = 'articles.csv'
