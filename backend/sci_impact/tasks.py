@@ -76,6 +76,9 @@ def get_references(article_ids):
         logger.info(f"Getting the references of the paper {article_obj.title}")
         repo_id = article_obj.repo_id.value
         paper_references = ec.get_paper_references(repo_id)
+        if not paper_references:
+            logger.info(f"Found 0 references for the paper")
+            continue
         logger.info(f"Found {len(paper_references)} references for the paper")
         for i, paper_reference in enumerate(paper_references):
             article_reference_obj, created_objs = am.process_paper(i, paper_reference)
@@ -116,7 +119,7 @@ def get_references(article_ids):
                             pass
         else:
             logger.info(f"Could not find references for the paper")
-        logger.info(f"The process has finished! It was created {num_references} references")
+    logger.info(f"The process has finished! It was created {num_references} references")
 
 
 @shared_task
