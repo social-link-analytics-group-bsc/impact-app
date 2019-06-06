@@ -75,7 +75,7 @@ def get_references(article_ids):
         article_obj = Article.objects.get(id=article_id)
         logger.info(f"Getting the references of the paper {article_obj.title}")
         repo_id = article_obj.repo_id.value
-        paper_references = ec.get_paper_citations(repo_id)
+        paper_references = ec.get_paper_references(repo_id)
         logger.info(f"Found {len(paper_references)} references for the paper")
         for i, paper_reference in enumerate(paper_references):
             article_reference_obj, created_objs = am.process_paper(i, paper_reference)
@@ -83,14 +83,14 @@ def get_references(article_ids):
                 try:
                     ArtifactCitation.objects.get(from_artifact=article_obj,
                                                  to_artifact=article_reference_obj)
-                    logger.info('Citation already exists!')
+                    logger.info('Reference already exists!')
                 except ArtifactCitation.DoesNotExist:
                     # 1) Create citation
                     ref_obj = ArtifactCitation(from_artifact=article_obj,
                                                to_artifact=article_reference_obj)
                     ref_obj.save()
                     references_objs.append(ref_obj)
-                    logger.info('Citation created!')
+                    logger.info('Reference created!')
                     num_references += 1
                     authorships = article_reference_obj.authorship_set.all()
                     saved_reference_authors = []
@@ -104,12 +104,16 @@ def get_references(article_ids):
                             author.articles_with_citations += 1
                             author.save()
                         # 3) Update affiliation citation metrics
-                        affiliation = Affiliation.objects.get(scientist=author,
-                                                              institution=authorship.institution)
-                        affiliation.article_citations += 1
-                        affiliation.total_citations += 1
-                        affiliation.articles_with_citations += 1
-                        affiliation.save()
+                        try:
+                            affiliation = Affiliation.objects.get(scientist=author,
+                                                                  institution=authorship.institution)
+                            affiliation.article_citations += 1
+                            affiliation.total_citations += 1
+                            affiliation.articles_with_citations += 1
+                            affiliation.save()
+                        except Affiliation.DoesNotExist:
+                            # Ignore affiliations that don't exist
+                            pass
         else:
             logger.info(f"Could not find references for the paper")
         logger.info(f"The process has finished! It was created {num_references} references")
