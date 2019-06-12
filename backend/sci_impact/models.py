@@ -250,6 +250,11 @@ class ArtifactCitation(models.Model):
     class Meta:
         unique_together = ('from_artifact', 'to_artifact')
 
+    def __unicode__(self):
+        return f"From {self.from_artifact.title} To {self.to_artifact.title}"
+
+    def __str__(self):
+        return f"From {self.from_artifact.title} To {self.to_artifact.title}"
 
 class Authorship(models.Model):
     author = models.ForeignKey(Scientist, on_delete=models.CASCADE)
