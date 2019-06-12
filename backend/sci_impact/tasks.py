@@ -73,7 +73,7 @@ def get_references(article_ids):
     num_references = 0
     for article_id in article_ids:
         article_obj = Article.objects.get(id=article_id)
-        logger.info(f"Getting the references of the paper {article_obj.title}")
+        logger.info(f"Getting the references of the paper {article_obj.title} ({article_obj.year})")
         repo_id = article_obj.repo_id.value
         paper_references = ec.get_paper_references(repo_id)
         if not paper_references:
@@ -88,7 +88,7 @@ def get_references(article_ids):
                                                  to_artifact=article_reference_obj)
                     logger.info('Reference already exists!')
                 except ArtifactCitation.DoesNotExist:
-                    # 1) Create citation
+                    # 1) Create reference
                     ref_obj = ArtifactCitation(from_artifact=article_obj,
                                                to_artifact=article_reference_obj)
                     ref_obj.save()
