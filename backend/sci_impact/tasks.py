@@ -3,7 +3,7 @@ from celery import shared_task
 from data_collector.pubmed import EntrezClient
 from datetime import date
 from sci_impact.article import ArticleMgm
-from sci_impact.models import ArtifactCitation, Affiliation, Article, Authorship
+from sci_impact.models import ArtifactCitation, Affiliation, Article, Authorship, Scientist
 
 
 logger = get_task_logger(__name__)
@@ -160,3 +160,33 @@ def fill_affiliation_join_date(affiliation_ids):
             affiliation.delete()
     logger.info(f"It was completed {num_affiliations} affiliations")
     logger.info(f"{deleted_affiliations} affiliations were deleted because they don't any authorship associated")
+
+@shared_task
+def compute_h_index(scientist_ids):
+    for scientist_id in scientist_ids:
+        scientist = Scientist.objects.get(id=scientist_id)
+        logger.info(f"Computing the h-index of: {scientist}")
+        article_ids, author_citations = [], []
+        # Get citations of the scientist's articles
+        authorships = Authorship.objects.filter(author=scientist_id)
+        for authorship in authorships:
+            article = authorship.artifact
+            logger.info(article_ids)
+            if article.id not in article_ids:
+                article_ids.append(article.id)
+                article_citations = ArtifactCitation.objects.filter(to_artifact=article).count()
+                author_citations.append(article_citations)
+        h_index = scientist.articles_with_citations
+        if h_index > 0:
+            while True:
+                greater_counter = 0
+                for citation in author_citations:
+                    if citation >= h_index:
+                        greater_counter += 1
+                if greater_counter >= h_index:
+                    break
+                else:
+                    h_index -= 1
+        logger.info(f"H-index of {scientist}: {h_index}")
+        scientist.h_index = h_index
+        scientist.save()
