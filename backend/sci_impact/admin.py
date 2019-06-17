@@ -8,7 +8,8 @@ from django.http import HttpResponse
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
-from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references
+from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
+                             compute_h_index
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -20,7 +21,6 @@ import re
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-
 
 
 @admin.register(Country)
@@ -64,13 +64,15 @@ class CountryAdmin(admin.ModelAdmin):
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'affiliations', 'articles',
-                    'articles_as_first_author', 'articles_as_last_author','article_citations', 'total_citations')
+                    'articles_with_citations', 'articles_as_first_author', 'articles_as_last_author',
+                    'article_citations', 'h_index')
     ordering = ('last_name', 'articles', 'articles_as_first_author', 'articles_as_last_author')
     search_fields = ('first_name', 'last_name',)
-    actions = ['compute_coauthors_network', 'export_as_csv', 'get_articles_pubmed', 'identify_possible_duplicates',
-               'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator', 'mark_as_not_duplicate',
-               'udpate_productivity_metrics']
+    actions = ['compute_coauthors_network', 'compute_h_index' ,'export_as_csv', 'get_articles_pubmed',
+               'identify_possible_duplicates', 'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator',
+               'mark_as_not_duplicate', 'udpate_productivity_metrics']
     list_filter = ('is_pi_inb', 'gender',)
+    raw_id_fields = ['scientist_ids', 'most_recent_pi_inb_collaborator']  # to increase the load time of the change view
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -159,7 +161,7 @@ class ScientistAdmin(admin.ModelAdmin):
             scientist_to_keep.articles_as_first_author += duplicate_scientist.articles_as_first_author
             scientist_to_keep.articles_as_last_author += duplicate_scientist.articles_as_last_author
             scientist_to_keep.articles_with_citations += duplicate_scientist.articles_with_citations
-            scientist_to_keep.articles_citations += duplicate_scientist.articles_citations
+            scientist_to_keep.article_citations += duplicate_scientist.article_citations
             scientist_to_keep.books += duplicate_scientist.books
             scientist_to_keep.patents += duplicate_scientist.patents
             scientist_to_keep.datasets += duplicate_scientist.datasets
@@ -167,7 +169,7 @@ class ScientistAdmin(admin.ModelAdmin):
             scientist_to_keep.book_citations += duplicate_scientist.book_citations
             scientist_to_keep.dataset_citations += duplicate_scientist.dataset_citations
             scientist_to_keep.patent_citations += duplicate_scientist.patent_citations
-            scientist_to_keep.tools_citations += duplicate_scientist.tools_citations
+            scientist_to_keep.tool_citations += duplicate_scientist.tool_citations
             scientist_to_keep.total_citations += duplicate_scientist.total_citations
             scientist_to_keep.save()
             # 2) update authorship
@@ -558,6 +560,14 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     udpate_productivity_metrics.short_description = 'Update productivity metrics'
 
+    def compute_h_index(self, request, queryset):
+        scientist_ids = []
+        for scientist_obj in queryset:
+            scientist_ids.append(scientist_obj.id)
+        compute_h_index.delay(scientist_ids)
+        msg = f"The computation has started, please check the log to follow updates on the process"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    compute_h_index.short_description = 'Compute h-index'
 
 @admin.register(Institution)
 class InstitutionAdmin(admin.ModelAdmin):
