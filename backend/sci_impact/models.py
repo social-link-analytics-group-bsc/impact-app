@@ -246,6 +246,7 @@ class Patent(Artifact):
 class ArtifactCitation(models.Model):
     from_artifact = models.ForeignKey(Artifact, related_name='from_artifact', on_delete=models.CASCADE)
     to_artifact = models.ForeignKey(Artifact, related_name='to_artifact', on_delete=models.CASCADE)
+    self_citation = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('from_artifact', 'to_artifact')
