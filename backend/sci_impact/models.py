@@ -350,10 +350,16 @@ class Impact(models.Model):
     start_year = models.IntegerField(choices=YEAR_CHOICES)
     end_year = models.IntegerField(choices=YEAR_CHOICES)
     total_publications = models.IntegerField(default=0)
-    total_weighted_impact = models.IntegerField(default=0)
+    total_weighted_impact = models.FloatField(default=0)
+
+    def __unicode__(self):
+        return f"{self.name}"
+
+    def __str__(self):
+        return f"{self.name}"
 
 
-class ImpactDetails(models.Model):
+class ImpactDetail(models.Model):
     impact_header = models.ForeignKey(Impact, on_delete=models.CASCADE)
     year = models.IntegerField(choices=YEAR_CHOICES)
     publications = models.IntegerField()
@@ -367,10 +373,14 @@ class ImpactDetails(models.Model):
 
 
 class FieldCitations(models.Model):
-    source = models.CharField(max_length=200)
+    field = models.CharField(max_length=200)
+    source_name = models.CharField(max_length=200)
+    source_url = models.URLField(blank=True, null=True)
     year = models.IntegerField(choices=YEAR_CHOICES)
     avg_citations_field = models.FloatField()
 
+    class Meta:
+        verbose_name_plural = "field citations"
 
 # class Citation(models.Model):
 #     title = models.CharField(max_length=100, null=True, blank=True)
