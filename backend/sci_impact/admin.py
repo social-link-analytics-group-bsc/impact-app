@@ -7,7 +7,7 @@ from django.db import transaction
 from django.http import HttpResponse
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
-                              Network, NetworkNode, NetworkEdge, ArtifactCitation, Impact, ImpactDetails, \
+                              Network, NetworkNode, NetworkEdge, ArtifactCitation, Impact, ImpactDetail, \
                               FieldCitations
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
                              compute_h_index, update_productivy_metrics, identify_self_citation
@@ -795,53 +795,104 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
+    list_display = ('name', 'date', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
     readonly_fields = ('date', 'total_publications', 'total_weighted_impact')
+    actions = ['compute_sci_impact_inb']
 
-    def save_model(self, request, obj, form, change):
-        total_publications, total_weighted_impact = 0, 0
-        arr_impact_details = []
-        for year in range(obj.start_year, obj.end_year+1):
-            field_citations_year_obj = FieldCitations.objects.get(year=year)
-            field_citations = field_citations_year_obj.year
-            publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
-            num_publications_year = len(publications_year)
-            total_publications += num_publications_year
-            num_citations = 0
-            num_not_cited_publications = 0
-            num_self_citations = 0
-            for publication in publications_year:
-                citations = ArtifactCitation.objects.filter(to_artifact=publication)
-                if len(citations) > 0:
-                    num_citations += citations
-                else:
-                    num_not_cited_publications += 1
-                for citation in citations:
-                    if citation.self_citation:
-                        num_self_citations += 1
-            avg_cpp = num_citations/num_publications_year
-            prop_ncp = num_not_cited_publications/num_publications_year
-            prop_sc = num_self_citations/num_publications_year
-            impact_field = avg_cpp/field_citations
-            impact_details_dict = {
-                'impact_header': obj.id,
-                'year': year,
-                'publications': num_publications_year,
-                'citations': num_citations,
-                'avg_citations_per_publication': avg_cpp,
-                'prop_not_cited_publications': prop_ncp,
-                'prop_self_citations': prop_sc,
-                'impact_field': impact_field
-            }
-            arr_impact_details.append(impact_details_dict)
-        for impact_details in arr_impact_details:
-            prop_py = impact_details['publications']/total_publications
-            impact_details['prop_publications_year'] = prop_py
-            weighted_if = impact_details['impact_field']*prop_py
-            impact_details['weighted_impact_field'] = weighted_if
-            total_weighted_impact += weighted_if
-            id_obj = ImpactDetails(**impact_details)
-            id_obj.save()
-        obj.total_publications = total_publications
-        obj.total_weighted_impact = total_weighted_impact
-        obj.save()
-        super().save_model(request, obj, form, change)
+    def compute_sci_impact_inb(self, request, queryset):
+        for obj in queryset:
+            total_publications, total_weighted_impact = 0, 0
+            arr_impact_details = []
+            for year in range(obj.start_year, obj.end_year + 1):
+                field_citations_year_obj = FieldCitations.objects.get(year=year)
+                field_citations = field_citations_year_obj.avg_citations_field
+                publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
+                num_publications_year = len(publications_year)
+                total_publications += num_publications_year
+                num_citations = 0
+                num_not_cited_publications = 0
+                num_self_citations = 0
+                for publication in publications_year:
+                    citations = ArtifactCitation.objects.filter(to_artifact=publication)
+                    if len(citations) > 0:
+                        num_citations += len(citations)
+                        for citation in citations:
+                            if citation.self_citation:
+                                num_self_citations += 1
+                    else:
+                        num_not_cited_publications += 1
+                avg_cpp = num_citations / num_publications_year
+                prop_ncp = num_not_cited_publications / num_publications_year
+                prop_sc = num_self_citations / num_citations
+                impact_field = avg_cpp / field_citations
+                impact_details_dict = {
+                    'impact_header': obj,
+                    'year': year,
+                    'publications': num_publications_year,
+                    'citations': num_citations,
+                    'avg_citations_per_publication': avg_cpp,
+                    'prop_not_cited_publications': prop_ncp,
+                    'prop_self_citations': prop_sc,
+                    'impact_field': impact_field
+                }
+                arr_impact_details.append(impact_details_dict)
+            for impact_details in arr_impact_details:
+                prop_py = impact_details['publications'] / total_publications
+                impact_details['prop_publications_year'] = prop_py
+                weighted_if = impact_details['impact_field'] * prop_py
+                impact_details['weighted_impact_field'] = weighted_if
+                total_weighted_impact += weighted_if
+                id_obj = ImpactDetail(**impact_details)
+                id_obj.save()
+            obj.total_publications = total_publications
+            obj.total_weighted_impact = total_weighted_impact
+            obj.save()
+        msg = f"The computation of the scientific impact was computed successfully!"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    compute_sci_impact_inb.short_description = 'Compute the Scientific Impact of the INB'
+
+    def total_w_impact(self, obj):
+        return round(obj.total_weighted_impact, 2)
+    total_w_impact.short_description = 'Total Weighted Impact'
+
+
+@admin.register(FieldCitations)
+class FieldCitationsAdmin(admin.ModelAdmin):
+    list_display = ('field', 'source_name', 'source_url', 'year', 'avg_citations_field')
+    ordering = ('year',)
+
+
+@admin.register(ImpactDetail)
+class ImpactDetailAdmin(admin.ModelAdmin):
+    list_display = ('impact_header', 'year', 'publications', 'citations', 'citations_per_publication',
+                    'not_cited_publications', 'self_citations', 'citations_field', 'impact',
+                    'publications_year', 'w_impact_field')
+    ordering = ('year',)
+
+    def citations_per_publication(self, obj):
+        return round(obj.avg_citations_per_publication, 2)
+
+    def not_cited_publications(self, obj):
+        return round(100*obj.prop_not_cited_publications, 2)
+    not_cited_publications.short_description = '% Not Cited Publications'
+
+    def self_citations(self, obj):
+        return round(100*obj.prop_self_citations, 2)
+    self_citations.short_description = '% Self-citations'
+
+    def impact(self, obj):
+        return round(obj.impact_field, 2)
+    impact.short_description = 'Scientific Impact'
+
+    def citations_field(self, obj):
+        fc = FieldCitations.objects.get(year=obj.year)
+        return round(fc.avg_citations_field, 2)
+    citations_field.short_description = 'Avg. Field Citations of the Year'
+
+    def publications_year(self, obj):
+        return round(100*obj.prop_publications_year, 2)
+    publications_year.short_description = '% Publications of the Total'
+
+    def w_impact_field(self, obj):
+        return round(obj.weighted_impact_field, 2)
+    w_impact_field.short_description = 'Weighted Impact Field'
