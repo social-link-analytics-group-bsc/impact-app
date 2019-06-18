@@ -348,7 +348,7 @@ class Impact(models.Model):
     name = models.CharField(max_length=200)
     date = models.DateTimeField(default=timezone.now)
     start_year = models.IntegerField(choices=YEAR_CHOICES)
-    end_year = models.IntegerField(default=datetime.date.today().year)
+    end_year = models.IntegerField(choices=YEAR_CHOICES)
     total_publications = models.IntegerField(default=0)
     total_weighted_impact = models.IntegerField(default=0)
 
