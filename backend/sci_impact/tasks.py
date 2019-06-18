@@ -135,6 +135,7 @@ def mark_articles_of_inb_pis(article_ids):
                 article_obj.save()
                 break
 
+
 @shared_task
 def fill_affiliation_join_date(affiliation_ids):
     num_affiliations, deleted_affiliations = 0, 0
@@ -161,6 +162,7 @@ def fill_affiliation_join_date(affiliation_ids):
     logger.info(f"It was completed {num_affiliations} affiliations")
     logger.info(f"{deleted_affiliations} affiliations were deleted because they don't any authorship associated")
 
+
 @shared_task
 def compute_h_index(scientist_ids):
     for scientist_id in scientist_ids:
@@ -171,7 +173,6 @@ def compute_h_index(scientist_ids):
         authorships = Authorship.objects.filter(author=scientist_id)
         for authorship in authorships:
             article = authorship.artifact
-            logger.info(article_ids)
             if article.id not in article_ids:
                 article_ids.append(article.id)
                 article_citations = ArtifactCitation.objects.filter(to_artifact=article).count()
@@ -190,6 +191,7 @@ def compute_h_index(scientist_ids):
         logger.info(f"H-index of {scientist}: {h_index}")
         scientist.h_index = h_index
         scientist.save()
+
 
 @shared_task
 def update_productivy_metrics(scientist_ids):
@@ -219,3 +221,22 @@ def update_productivy_metrics(scientist_ids):
         scientist_obj.article_citations = scientist_production['article_citations']
         scientist_obj.articles_with_citations = scientist_production['articles_with_citations']
         scientist_obj.save()
+
+
+@shared_task
+def identify_self_citation():
+    citations = ArtifactCitation.objects.all()
+    for citation in citations:
+        from_article = citation.from_artifact
+        to_article = citation.to_artifact
+        # get authors of to_article
+        to_authorships = Authorship.objects.filter(artifact=to_article).distinct('author').values_list('author')
+        to_authors = set([to_authorship[0] for to_authorship in to_authorships])
+        # get authors of from article
+        from_authorships = Authorship.objects.filter(artifact=from_article).distinct('author').values_list('author')
+        from_authors = set([from_authorship[0] for from_authorship in from_authorships])
+        # check if the are authors in common between the source and target articles
+        common_authors = from_authors.intersection(to_authors)
+        if len(common_authors) > 0:
+            citation.self_citation = True
+            citation.save()
