@@ -198,7 +198,7 @@ def update_productivy_metrics(scientist_ids):
         scientist_production = {'articles': 0, 'articles_as_first_author': 0, 'articles_as_last_author': 0,
                                 'articles_with_citations': 0, 'article_citations': 0}
         articles = []
-        logger.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
+        logger.info(f"Updating the metrics of {scientist_obj}")
         scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
         for scientist_authorship in scientist_authorships:
             if scientist_authorship.artifact_id not in articles:
