@@ -190,3 +190,32 @@ def compute_h_index(scientist_ids):
         logger.info(f"H-index of {scientist}: {h_index}")
         scientist.h_index = h_index
         scientist.save()
+
+@shared_task
+def update_productivy_metrics(scientist_ids):
+    for scientist_id in scientist_ids:
+        scientist_obj = Scientist.objects.get(id=scientist_id)
+        scientist_production = {'articles': 0, 'articles_as_first_author': 0, 'articles_as_last_author': 0,
+                                'articles_with_citations': 0, 'article_citations': 0}
+        articles = []
+        logger.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
+        scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
+        for scientist_authorship in scientist_authorships:
+            if scientist_authorship.artifact_id not in articles:
+                articles.append(scientist_authorship.artifact_id)
+                scientist_production['articles'] += 1
+                if scientist_authorship.first_author:
+                    scientist_production['articles_as_first_author'] += 1
+                if scientist_authorship.last_author:
+                    scientist_production['articles_as_last_author'] += 1
+                article_citations = ArtifactCitation.objects.filter(to_artifact=scientist_authorship.artifact_id). \
+                    count()
+                scientist_production['article_citations'] += article_citations
+                if article_citations > 0:
+                    scientist_production['articles_with_citations'] += 1
+        scientist_obj.articles = scientist_production['articles']
+        scientist_obj.articles_as_first_author = scientist_production['articles_as_first_author']
+        scientist_obj.articles_as_last_author = scientist_production['articles_as_last_author']
+        scientist_obj.article_citations = scientist_production['article_citations']
+        scientist_obj.articles_with_citations = scientist_production['articles_with_citations']
+        scientist_obj.save()
