@@ -9,7 +9,7 @@ from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
-                             compute_h_index
+                             compute_h_index, update_productivy_metrics
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -68,7 +68,7 @@ class ScientistAdmin(admin.ModelAdmin):
                     'article_citations', 'h_index')
     ordering = ('last_name', 'articles', 'articles_as_first_author', 'articles_as_last_author')
     search_fields = ('first_name', 'last_name',)
-    actions = ['compute_coauthors_network', 'compute_h_index' ,'export_as_csv', 'get_articles_pubmed',
+    actions = ['compute_h_index','export_as_csv', 'compute_coauthors_network', 'get_articles_pubmed',
                'identify_possible_duplicates', 'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator',
                'mark_as_not_duplicate', 'udpate_productivity_metrics']
     list_filter = ('is_pi_inb', 'gender',)
@@ -539,24 +539,11 @@ class ScientistAdmin(admin.ModelAdmin):
     mark_as_not_duplicate.short_description = 'Remove from duplicates list'
 
     def udpate_productivity_metrics(self, request, queryset):
+        scientist_ids = []
         for scientist_obj in queryset:
-            scientist_production = {'articles': 0, 'articles_as_first_author': 0, 'articles_as_last_author': 0}
-            articles = []
-            logger.info(f"Updating the metrics of {scientist_obj.first_name + '' + scientist_obj.last_name}")
-            scientist_authorships = Authorship.objects.filter(author_id=scientist_obj.id)
-            for scientist_authorship in scientist_authorships:
-                if scientist_authorship.artifact_id not in articles:
-                    articles.append(scientist_authorship.artifact_id)
-                    scientist_production['articles'] += 1
-                    if scientist_authorship.first_author:
-                        scientist_production['articles_as_first_author'] += 1
-                    if scientist_authorship.last_author:
-                        scientist_production['articles_as_last_author'] += 1
-            scientist_obj.articles = scientist_production['articles']
-            scientist_obj.articles_as_first_author = scientist_production['articles_as_first_author']
-            scientist_obj.articles_as_last_author = scientist_production['articles_as_last_author']
-            scientist_obj.save()
-        msg = f"{len(queryset)} records were updated"
+            scientist_ids.append(scientist_obj.id)
+        update_productivy_metrics.delay(scientist_ids)
+        msg = f"Records are being updated, please check the log to follow updates on the process"
         self.message_user(request, msg, level=messages.SUCCESS)
     udpate_productivity_metrics.short_description = 'Update productivity metrics'
 
