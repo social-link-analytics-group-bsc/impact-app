@@ -224,19 +224,25 @@ def update_productivy_metrics(scientist_ids):
 
 
 @shared_task
-def identify_self_citation():
-    citations = ArtifactCitation.objects.all()
-    for citation in citations:
-        from_article = citation.from_artifact
-        to_article = citation.to_artifact
-        # get authors of to_article
-        to_authorships = Authorship.objects.filter(artifact=to_article).distinct('author').values_list('author')
-        to_authors = set([to_authorship[0] for to_authorship in to_authorships])
-        # get authors of from article
-        from_authorships = Authorship.objects.filter(artifact=from_article).distinct('author').values_list('author')
-        from_authors = set([from_authorship[0] for from_authorship in from_authorships])
-        # check if the are authors in common between the source and target articles
-        common_authors = from_authors.intersection(to_authors)
-        if len(common_authors) > 0:
-            citation.self_citation = True
-            citation.save()
+def identify_self_citation(article_ids):
+    for article_id in article_ids:
+        article = Article.objects.get(id=article_id)
+        logger.info(f"Analyzing the citations of the article: {article}")
+        citations = ArtifactCitation.objects.filter(from_artifact=article)
+        # get authors of the article
+        authorships = Authorship.objects.filter(artifact=article).distinct('author').values_list('author')
+        authors = set([to_authorship[0] for to_authorship in authorships])
+        num_self_citations = 0
+        for citation in citations:
+            target_article = citation.to_artifact
+            # get authors of from article
+            target_authorships = Authorship.objects.filter(artifact=target_article).distinct('author').values_list('author')
+            target_authors = set([target_authorship[0] for target_authorship in target_authorships])
+            # check if the are authors in common between the source and target articles
+            common_authors = authors.intersection(target_authors)
+            if len(common_authors) > 0:
+                citation.self_citation = True
+                citation.save()
+                num_self_citations += 1
+        logger.info(f"The article has {num_self_citations} self-citations")
+    logger.info('The process has finished...')
