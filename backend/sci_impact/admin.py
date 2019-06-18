@@ -795,6 +795,7 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
+    readonly_fields = ('date', 'total_publications', 'total_weighted_impact')
 
     def save_model(self, request, obj, form, change):
         total_publications, total_weighted_impact = 0, 0
