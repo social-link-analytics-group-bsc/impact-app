@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 
+import datetime
+
 # Constants
 
 GENDERS = (
@@ -48,6 +50,10 @@ NET_TYPE = (
     ('directed', 'Directed'),
     ('undirected', 'Undirected'),
 )
+
+YEAR_CHOICES = []
+for year in range(2000, datetime.date.today().year+1):
+    YEAR_CHOICES.append((year, year))
 
 
 class Artifact(models.Model):
@@ -337,6 +343,33 @@ class NetworkEdge(models.Model):
     network = models.ForeignKey(Network, on_delete=models.CASCADE)
     attrs = models.ManyToManyField(CustomField, blank=True)
 
+
+class Impact(models.Model):
+    name = models.CharField(max_length=200)
+    date = models.DateTimeField(default=timezone.now)
+    start_year = models.IntegerField(choices=YEAR_CHOICES)
+    end_year = models.IntegerField(default=datetime.date.today().year)
+    total_publications = models.IntegerField(default=0)
+    total_weighted_impact = models.IntegerField(default=0)
+
+
+class ImpactDetails(models.Model):
+    impact_header = models.ForeignKey(Impact, on_delete=models.CASCADE)
+    year = models.IntegerField(choices=YEAR_CHOICES)
+    publications = models.IntegerField()
+    citations = models.IntegerField()
+    avg_citations_per_publication = models.FloatField()
+    prop_not_cited_publications = models.FloatField()
+    prop_self_citations = models.FloatField()
+    impact_field = models.FloatField()
+    prop_publications_year = models.FloatField()
+    weighted_impact_field = models.FloatField()
+
+
+class FieldCitations(models.Model):
+    source = models.CharField(max_length=200)
+    year = models.IntegerField(choices=YEAR_CHOICES)
+    avg_citations_field = models.FloatField()
 
 
 # class Citation(models.Model):
