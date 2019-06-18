@@ -9,7 +9,7 @@ from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
-                             compute_h_index, update_productivy_metrics
+                             compute_h_index, update_productivy_metrics, identify_self_citation
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -623,7 +623,8 @@ class ArticleAdmin(admin.ModelAdmin):
     ordering = ('year', 'title',)
     search_fields = ('title', 'doi')
     list_filter = (YearFilter, 'inb_pi_as_author')
-    actions = ['export_articles_to_csv', 'get_citations', 'get_references', 'mark_articles_of_inb_pis']
+    actions = ['export_articles_to_csv', 'get_citations', 'get_references', 'identify_self_citations',
+               'mark_articles_of_inb_pis']
 
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
@@ -682,7 +683,6 @@ class ArticleAdmin(admin.ModelAdmin):
     get_references.short_description = 'Get references'
 
     def mark_articles_of_inb_pis(self, request, queryset):
-        logger.info('Starting the process...')
         article_ids = []
         for article in queryset:
             article_ids.append(article.id)
@@ -690,6 +690,15 @@ class ArticleAdmin(admin.ModelAdmin):
         msg = f"The process has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_articles_of_inb_pis.short_description = "Mark INB PIs' articles"
+
+    def identify_self_citations(self, request, queryset):
+        article_ids = []
+        for article in queryset:
+            article_ids.append(article.id)
+        identify_self_citation.delay(article_ids)
+        msg = f"The process has started, please refer to the log to get updates about it"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    identify_self_citations.short_description = "Identify self-citations"
 
 
 @admin.register(Authorship)
