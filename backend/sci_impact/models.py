@@ -346,11 +346,11 @@ class NetworkEdge(models.Model):
 
 class Impact(models.Model):
     name = models.CharField(max_length=200)
-    date = models.DateTimeField(default=timezone.now)
+    date = models.DateTimeField(default=timezone.now, editable=False)
     start_year = models.IntegerField(choices=YEAR_CHOICES)
     end_year = models.IntegerField(choices=YEAR_CHOICES)
-    total_publications = models.IntegerField(default=0)
-    total_weighted_impact = models.FloatField(default=0)
+    total_publications = models.IntegerField(default=0, editable=False)
+    total_weighted_impact = models.FloatField(default=0, editable=False)
 
     def __unicode__(self):
         return f"{self.name}"
