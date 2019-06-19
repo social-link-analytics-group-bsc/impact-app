@@ -796,8 +796,8 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
     list_display = ('name', 'date', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
-    readonly_fields = ('date', 'total_publications', 'total_weighted_impact')
     actions = ['compute_sci_impact_inb']
+    exclude = ['date', 'total_publications', 'total_weighted_impact']
 
     def compute_sci_impact_inb(self, request, queryset):
         for obj in queryset:
