@@ -235,7 +235,7 @@ def identify_self_citation(article_ids):
         num_self_citations = 0
         for citation in citations:
             target_article = citation.to_artifact
-            # get authors of from article
+            # get authors of article
             target_authorships = Authorship.objects.filter(artifact=target_article).distinct('author').values_list('author')
             target_authors = set([target_authorship[0] for target_authorship in target_authorships])
             # check if the are authors in common between the source and target articles
