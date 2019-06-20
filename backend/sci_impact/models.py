@@ -347,6 +347,8 @@ class NetworkEdge(models.Model):
 class Impact(models.Model):
     name = models.CharField(max_length=200)
     date = models.DateTimeField(default=timezone.now, editable=False)
+    scientist = models.ForeignKey(Scientist, null=True, blank=True, on_delete=models.CASCADE)
+    institution = models.ForeignKey(Institution, null=True, blank=True, on_delete=models.CASCADE)
     start_year = models.IntegerField(choices=YEAR_CHOICES)
     end_year = models.IntegerField(choices=YEAR_CHOICES)
     total_publications = models.IntegerField(default=0, editable=False)
