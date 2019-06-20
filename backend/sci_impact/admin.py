@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from sci_impact.article import ArticleMgm
 from sci_impact.models import Scientist, Country, Institution, Affiliation, Article, Authorship, CustomField, \
                               Network, NetworkNode, NetworkEdge, ArtifactCitation, Impact, ImpactDetail, \
-                              FieldCitations
+                              FieldCitations, Artifact
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
                              compute_h_index, update_productivy_metrics, identify_self_citation
 from similarity.jarowinkler import JaroWinkler
@@ -73,7 +73,8 @@ class ScientistAdmin(admin.ModelAdmin):
                'identify_possible_duplicates', 'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator',
                'mark_as_not_duplicate', 'udpate_productivity_metrics']
     list_filter = ('is_pi_inb', 'gender',)
-    raw_id_fields = ['scientist_ids', 'most_recent_pi_inb_collaborator']  # to increase the load time of the change view
+    # to increase the loading time of the change view
+    raw_id_fields = ['scientist_ids', 'most_recent_pi_inb_collaborator']
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
@@ -704,7 +705,7 @@ class ArticleAdmin(admin.ModelAdmin):
 
 @admin.register(Authorship)
 class AuthorshipAdmin(admin.ModelAdmin):
-    list_display = ('author', 'artifact', 'first_author')
+    list_display = ('author', 'artifact', 'first_author', 'year')
     ordering = ('author', 'artifact')
     search_fields = ('author__first_name', 'author__last_name', 'artifact__title')
 
@@ -712,6 +713,9 @@ class AuthorshipAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request) #super(AuthorshipAdmin, self).queryset(request)
         qs = qs.distinct('author', 'artifact')
         return qs
+
+    def year(self, obj):
+        return obj.artifact.year
 
 
 @admin.register(Network)
@@ -798,15 +802,21 @@ class ImpactAdmin(admin.ModelAdmin):
     list_display = ('name', 'date', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
     actions = ['compute_sci_impact_inb']
     exclude = ['date', 'total_publications', 'total_weighted_impact']
+    raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
+    autocomplete_fields = ['scientist', 'institution']
 
-    def compute_sci_impact_inb(self, request, queryset):
+    def compute_sci_impact(self, queryset, computation_type='inb'):
         for obj in queryset:
             total_publications, total_weighted_impact = 0, 0
             arr_impact_details = []
             for year in range(obj.start_year, obj.end_year + 1):
                 field_citations_year_obj = FieldCitations.objects.get(year=year)
                 field_citations = field_citations_year_obj.avg_citations_field
-                publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
+                if computation_type == 'inb':
+                    publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
+                else:
+                    publications_year = Artifact.objects.filter(pk__in=Authorship.objects.filter(author=obj.scientist).
+                                                                distinct('artifact').values('artifact'), year=year)
                 num_publications_year = len(publications_year)
                 total_publications += num_publications_year
                 num_citations = 0
@@ -847,6 +857,15 @@ class ImpactAdmin(admin.ModelAdmin):
             obj.total_publications = total_publications
             obj.total_weighted_impact = total_weighted_impact
             obj.save()
+
+    def compute_sci_impact_scientist(self, request, queryset):
+        self.compute_sci_impact(queryset, computation_type='scientist')
+        msg = f"The computation of the scientific impact was computed successfully!"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    compute_sci_impact_scientist.short_description = 'Compute the Scientific Impact of a Scientist'
+
+    def compute_sci_impact_inb(self, request, queryset):
+        self.compute_sci_impact(queryset, computation_type='inb')
         msg = f"The computation of the scientific impact was computed successfully!"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_sci_impact_inb.short_description = 'Compute the Scientific Impact of the INB'
