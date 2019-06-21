@@ -182,8 +182,9 @@ class ScientistAdmin(admin.ModelAdmin):
             # 3) update affiliation
             affiliations = Affiliation.objects.filter(scientist=duplicate_scientist)
             for affiliation in affiliations:
-                affiliation.scientist = scientist_to_keep
-                affiliation.save()
+                if Affiliation.objects.filter(scientist=scientist_to_keep).count() == 0:
+                    affiliation.scientist = scientist_to_keep
+                    affiliation.save()
             # 4) update pi collaborator
             collabs = Scientist.objects.filter(most_recent_pi_inb_collaborator=duplicate_scientist)
             for collab in collabs:
@@ -800,7 +801,7 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
     list_display = ('name', 'date', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
-    actions = ['compute_sci_impact_inb']
+    actions = ['compute_sci_impact_inb', 'compute_sci_impact_scientist']
     exclude = ['date', 'total_publications', 'total_weighted_impact']
     raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
     autocomplete_fields = ['scientist', 'institution']
@@ -831,10 +832,10 @@ class ImpactAdmin(admin.ModelAdmin):
                                 num_self_citations += 1
                     else:
                         num_not_cited_publications += 1
-                avg_cpp = num_citations / num_publications_year
-                prop_ncp = num_not_cited_publications / num_publications_year
-                prop_sc = num_self_citations / num_citations
-                impact_field = avg_cpp / field_citations
+                avg_cpp = num_citations / num_publications_year if num_publications_year > 0 else 0
+                prop_ncp = num_not_cited_publications / num_publications_year if num_publications_year > 0 else 0
+                prop_sc = num_self_citations / num_citations if num_citations > 0 else 0
+                impact_field = avg_cpp / field_citations if field_citations > 0 else 0
                 impact_details_dict = {
                     'impact_header': obj,
                     'year': year,
@@ -847,7 +848,7 @@ class ImpactAdmin(admin.ModelAdmin):
                 }
                 arr_impact_details.append(impact_details_dict)
             for impact_details in arr_impact_details:
-                prop_py = impact_details['publications'] / total_publications
+                prop_py = impact_details['publications'] / total_publications if total_publications else 0
                 impact_details['prop_publications_year'] = prop_py
                 weighted_if = impact_details['impact_field'] * prop_py
                 impact_details['weighted_impact_field'] = weighted_if
@@ -887,6 +888,7 @@ class ImpactDetailAdmin(admin.ModelAdmin):
                     'not_cited_publications', 'self_citations', 'citations_field', 'impact',
                     'publications_year', 'w_impact_field')
     ordering = ('year',)
+    search_fields = ('impact_header__name', )
 
     def citations_per_publication(self, obj):
         return round(obj.avg_citations_per_publication, 2)
