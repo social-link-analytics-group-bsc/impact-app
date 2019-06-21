@@ -800,7 +800,7 @@ class NetworkAdmin(admin.ModelAdmin):
 
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
-    list_display = ('name', 'date', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
+    list_display = ('name', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
     actions = ['compute_sci_impact_inb', 'compute_sci_impact_scientist']
     exclude = ['date', 'total_publications', 'total_weighted_impact']
     raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
@@ -874,7 +874,7 @@ class ImpactAdmin(admin.ModelAdmin):
     def total_w_impact(self, obj):
         return round(obj.total_weighted_impact, 2)
     total_w_impact.short_description = 'Total Weighted Impact'
-
+    total_w_impact.admin_order_field = 'total_weighted_impact'
 
 @admin.register(FieldCitations)
 class FieldCitationsAdmin(admin.ModelAdmin):
