@@ -19,7 +19,7 @@ from django.contrib import admin
 from django.urls import re_path
 from django.conf.urls import include
 from rest_framework_swagger.views import get_swagger_view
-from sci_impact.views import index
+from sci_impact import views
 
 schema_view = get_swagger_view(title='Impact App API')
 
@@ -31,11 +31,10 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 urlpatterns = [
-    # root endpoint
-    #re_path(r'', index),
+    re_path(r'^$', views.index, name='index'),  # root endpoint
+    re_path(r'^admin/', admin.site.urls),  # admin view
     re_path(r'^api/$', schema_view),  # api root endpoint
     re_path(r'^api/sci_impact/', include('sci_impact.urls')),  # sci_impact api endpoints
-    re_path(r'^admin/', admin.site.urls),  # admin view
-    re_path(r'^api-auth/', include('rest_framework.urls')), # authentication
+    re_path(r'^api-auth/', include('rest_framework.urls')),  # authentication
 ]
 
