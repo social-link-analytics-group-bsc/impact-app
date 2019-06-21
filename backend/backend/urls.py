@@ -33,13 +33,9 @@ admin.site.unregister(Group)
 urlpatterns = [
     # root endpoint
     #re_path(r'', index),
-    # api root endpoint
-    re_path(r'^api/$', schema_view),
-    # sci_impact api endpoints
-    re_path(r'^api/sci_impact/', include('sci_impact.urls')),
-    # admin view
-    re_path(r'^admin/', admin.site.urls),
-    # authentication
-    re_path(r'^api-auth/', include('rest_framework.urls')),
+    re_path(r'^api/$', schema_view),  # api root endpoint
+    re_path(r'^api/sci_impact/', include('sci_impact.urls')),  # sci_impact api endpoints
+    re_path(r'^admin/', admin.site.urls),  # admin view
+    re_path(r'^api-auth/', include('rest_framework.urls')), # authentication
 ]
 
