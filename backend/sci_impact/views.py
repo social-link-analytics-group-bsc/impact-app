@@ -1,10 +1,12 @@
+from django.shortcuts import render
 from rest_framework import viewsets, permissions
 from sci_impact.models import Scientist, Article
 from sci_impact.serializers import ScientistSerializer, ArticleSerializer
 
 
-#def index(request):
-#    return HttpResponse("Hello, this app aim at computing the impact of scientific publications.")
+def index(request):
+    return render(request, "home.html")
+
 
 class ScientistViewSet(viewsets.ModelViewSet):
     """
