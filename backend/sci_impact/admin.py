@@ -564,13 +564,14 @@ class InstitutionAdmin(admin.ModelAdmin):
     list_display = ('name', 'country')
     ordering = ('name', 'country')
     search_fields = ('name', 'country__name')
-
+    raw_id_fields = ['country', 'region', 'city']  # to increase the loading time of the change view
 
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
     actions = ['fill_join_date', 'remove_duplicated_affiliation']
     search_fields = ('scientist', 'institution')
+    raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
 
     def fill_join_date(self, request, queryset):
         affiliation_ids = []
@@ -628,6 +629,7 @@ class ArticleAdmin(admin.ModelAdmin):
     list_filter = (YearFilter, 'inb_pi_as_author')
     actions = ['export_articles_to_csv', 'get_citations', 'get_references', 'identify_self_citations',
                'mark_articles_of_inb_pis']
+    raw_id_fields = ['venue', 'repo_id']  # to increase the loading time of the change view
 
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
@@ -709,6 +711,7 @@ class AuthorshipAdmin(admin.ModelAdmin):
     list_display = ('author', 'artifact', 'first_author', 'year')
     ordering = ('author', 'artifact')
     search_fields = ('author__first_name', 'author__last_name', 'artifact__title')
+    raw_id_fields = ['author', 'artifact', 'institution']  # to increase the loading time of the change view
 
     def get_queryset(self, request):
         qs = super().get_queryset(request) #super(AuthorshipAdmin, self).queryset(request)
