@@ -227,7 +227,7 @@ def update_productivy_metrics(scientist_ids):
 def identify_self_citation(article_ids):
     for article_id in article_ids:
         article = Article.objects.get(id=article_id)
-        logger.info(f"Analyzing the citations of the article: {article}")
+        logger.info(f"Analyzing citations of the article: {article}")
         citations = ArtifactCitation.objects.filter(from_artifact=article)
         # get authors of the article
         authorships = Authorship.objects.filter(artifact=article).distinct('author').values_list('author')
@@ -246,3 +246,24 @@ def identify_self_citation(article_ids):
                 num_self_citations += 1
         logger.info(f"The article has {num_self_citations} self-citations")
     logger.info('The process has finished...')
+
+
+@shared_task
+def fix_incorrect_citation(citation_ids):
+    for citation_id in citation_ids:
+        citation_obj = ArtifactCitation.objects.get(id=citation_id)
+        fixed_citations = 0
+        if citation_obj.from_artifact.year < citation_obj.to_artifact.year:
+            logger.info(f"Fixing citation: {citation_obj.id}. From year: {citation_obj.from_artifact.year} "
+                        f"To year: {citation_obj.to_artifact.year}")
+            fixed_citations += 1
+            aux_citation = citation_obj.from_artifact
+            citation_obj.from_artifact = citation_obj.to_artifact
+            citation_obj.to_artifact = aux_citation
+            try:
+                citation_obj.save()
+            except:
+                logger.info(f"The swapped citation already exists!. It will be deleted")
+                citation_obj.delete()
+            fixed_citations += 1
+    logger.info(f"The process has finished, {fixed_citations} citations were fixed")

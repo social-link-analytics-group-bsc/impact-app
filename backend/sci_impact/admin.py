@@ -10,7 +10,7 @@ from sci_impact.models import Scientist, Country, Institution, Affiliation, Arti
                               Network, NetworkNode, NetworkEdge, ArtifactCitation, Impact, ImpactDetail, \
                               FieldCitations, Artifact
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
-                             compute_h_index, update_productivy_metrics, identify_self_citation
+                             compute_h_index, update_productivy_metrics, identify_self_citation, fix_incorrect_citation
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
@@ -879,6 +879,7 @@ class ImpactAdmin(admin.ModelAdmin):
     total_w_impact.short_description = 'Total Weighted Impact'
     total_w_impact.admin_order_field = 'total_weighted_impact'
 
+
 @admin.register(FieldCitations)
 class FieldCitationsAdmin(admin.ModelAdmin):
     list_display = ('field', 'source_name', 'source_url', 'year', 'avg_citations_field')
@@ -920,3 +921,18 @@ class ImpactDetailAdmin(admin.ModelAdmin):
     def w_impact_field(self, obj):
         return round(obj.weighted_impact_field, 2)
     w_impact_field.short_description = 'Weighted Impact Field'
+
+
+@admin.register(ArtifactCitation)
+class ArtifactCitationAdmin(admin.ModelAdmin):
+    list_display = ('from_artifact', 'to_artifact', 'self_citation')
+    actions = ['fix_citations']
+
+    def fix_citations(self, request, queryset):
+        citation_ids = []
+        for citation in queryset:
+            citation_ids.append(citation.id)
+        fix_incorrect_citation.delay(citation_ids)
+        msg = f"Citations are being fixed, please check the log to follow updates on the process"
+        self.message_user(request, msg, level=messages.SUCCESS)
+    fix_citations.short_description = 'Fix incorrect citations'
