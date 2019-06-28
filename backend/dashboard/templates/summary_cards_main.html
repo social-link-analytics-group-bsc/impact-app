@@ -1,0 +1,106 @@
+<!-- Total PIs -->
+<div class="col-xl-3 col-md-6 mb-4">
+  <div class="card border-left-primary shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Principal Investigators</div>
+            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_pis }}</div>
+            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-flask fa-3x text-gray-300"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Total Articles -->
+<div class="col-xl-3 col-md-6 mb-4">
+  <div class="card border-left-danger shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total articles</div>
+            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_articles }}</div>
+            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
+            <div class="small mb-0 text-gray-700">Source: <b>PubMed</b></div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-copy fa-3x text-gray-300"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Total Citations -->
+<div class="col-xl-3 col-md-6 mb-4">
+  <div class="card border-left-info shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Citations</div>
+            <div class="h5 mb-0 font-weight-bold">{{ total_citations }}</div>
+            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
+            <div class="small mb-0 text-gray-700">Source: <b>PubMed Central</b></div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Total Projects -->
+<div class="col-xl-3 col-md-6 mb-4">
+  <div class="card border-left-success shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total projects</div>
+            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_projects }}</div>
+            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
+            <div class="small mb-0 text-gray-700">Source: <b>Cordis</b></div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-project-diagram fa-3x text-gray-300"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Scientific Impact -->
+<!-- <div class="col-xl-2 col-md-6 mb-4">
+  <div class="card bg-warning shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">Scientific Impact</div>
+            <div class="h5 mb-0 font-weight-bold text-white">{{ scientific_impact }}*</div>
+            <div class="small mb-0 text-white">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+            <div class="small mb-0 text-white">*Two times above the international impact of the field</div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-info fa-3x text-gray-100"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> -->
+<!-- Social Impact -->
+<!-- <div class="col-xl-2 col-md-6 mb-4">
+  <div class="card bg-success shadow h-100 py-2">
+    <div class="card-body">
+      <div class="row no-gutters align-items-center">
+        <div class="col mr-2">
+            <div class="text-xs font-weight-bold text-white text-uppercase mb-1">Social Impact</div>
+            <div class="h5 mb-0 font-weight-bold text-white">{{ social_impact }}</div>
+            <div class="small mb-0 text-white">Period: {{ start_year }}-{{ end_year }}</div>
+        </div>
+        <div class="col-auto">
+          <i class="fas fa-info fa-3x text-gray-100"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+</div> -->

@@ -1,0 +1,108 @@
+<ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
+    <!-- Sidebar - Brand -->
+    <a class="sidebar-brand d-flex align-items-center justify-content-center" href="home.html">
+        <div class="sidebar-brand-icon rotate-n-15">
+            <i class="fas fa-info"></i>
+        </div>
+        <div class="sidebar-brand-text mx-3">Impact App</div>
+    </a>
+    <!-- Divider -->
+    <hr class="sidebar-divider my-0">
+    <!-- Nav Item - Dashboard -->
+    <li class="nav-item active">
+        <a class="nav-link" href="{% url 'dashboard' %}">
+            <i class="fas fa-fw fa-tachometer-alt"></i>
+            <span>Dashboard</span>
+        </a>
+    </li>
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+    <!-- Heading -->
+    <div class="sidebar-heading">Scientific Impact</div>
+    <!-- Nav Item -->
+    <li class="nav-item">
+        <a class="nav-link" href="sci_impact/inb">
+            <i class="fas fa-fw fa-university"></i>
+            <span>INB</span>
+        </a>
+    </li>
+    <!-- Nav Item -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#researchers" aria-expanded="true"
+           aria-controls="researchers">
+            <i class="fas fa-fw fa-flask"></i>
+            <span>Principal Investigators</span>
+        </a>
+        <div id="researchers" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+          <div class="bg-white py-2 collapse-inner rounded">
+              <!-- <h6 class="collapse-header">Custom Components:</h6> -->
+              <a class="collapse-item" href="#">José M. Carazo</a>
+              <a class="collapse-item" href="#">Joaquin Dopazo</a>
+              <a class="collapse-item" href="#">Josep L. Gelpi</a>
+              <a class="collapse-item" href="#">Roderic Guigo</a>
+              <a class="collapse-item" href="#">Ivo Gut</a>
+              <a class="collapse-item" href="#">Arcadi Navarro</a>
+              <a class="collapse-item" href="#">Modesto Orozco</a>
+              <a class="collapse-item" href="#">Ferran Sanz</a>
+              <a class="collapse-item" href="#">Oswaldo Trelles</a>
+              <a class="collapse-item" href="#">Alfonso Valencia</a>
+          </div>
+        </div>
+    </li>
+    <!-- Nav Item -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#">
+            <i class="fas fa-fw fa-wrench"></i>
+            <span>Methodology</span>
+        </a>
+    </li>
+    <!-- Divider -->
+    <hr class="sidebar-divider">
+    <!-- Heading -->
+    <div class="sidebar-heading">Social Impact</div>
+    <!-- Nav Item -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#projects" aria-expanded="true"
+           aria-controls="projects">
+            <i class="fas fa-fw fa-flask"></i>
+            <span>Projects</span>
+        </a>
+        <div id="projects" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
+          <div class="bg-white py-2 collapse-inner rounded">
+              <!-- <h6 class="collapse-header">Custom Components:</h6> -->
+              <a class="collapse-item" href="#">Project 1</a>
+              <a class="collapse-item" href="#">Project 2</a>
+              <a class="collapse-item" href="#">Project 3</a>
+          </div>
+        </div>
+    </li>
+    <!-- Nav Item -->
+    <li class="nav-item">
+        <a class="nav-link collapsed" href="#">
+            <i class="fas fa-fw fa-wrench"></i>
+            <span>Methodology</span>
+        </a>
+    </li>
+    <!-- Divider -->
+    <!-- <hr class="sidebar-divider"> -->
+    <!-- Nav Item - Charts -->
+    <!-- <li class="nav-item">
+        <a class="nav-link" href="charts.html">
+            <i class="fas fa-fw fa-chart-area"></i>
+            <span>Charts</span>
+        </a>
+    </li> -->
+    <!-- Nav Item - Tables -->
+    <!-- <li class="nav-item">
+        <a class="nav-link" href="tables.html">
+            <i class="fas fa-fw fa-table"></i>
+            <span>Tables</span>
+        </a>
+    </li> -->
+    <!-- Divider -->
+    <hr class="sidebar-divider d-none d-md-block">
+    <!-- Sidebar Toggler (Sidebar) -->
+    <div class="text-center d-none d-md-inline">
+        <button class="rounded-circle border-0" id="sidebarToggle"></button>
+    </div>
+</ul>

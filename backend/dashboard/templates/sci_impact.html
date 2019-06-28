@@ -1,0 +1,166 @@
+{% extends 'base_dashboard.html' %}
+
+<script>
+{% block javascript %}
+  drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
+  console.log({{ data_pis_chart|safe }})
+  drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
+{% endblock %}
+</script>
+
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Spanish National Institute of Bioinformatics</h1>
+        <!-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
+    </div>
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total articles</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_publications }}</div>
+                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+                    <div class="small mb-0 text-gray-700">Source: <b>PubMed</b></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-copy fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total citations</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_citations }}</div>
+                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+                    <div class="small mb-0 text-gray-700">Source: <b>PubMed Central</b></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average citations per articles</div>
+                    <div class="h5 mb-0 font-weight-bold">{{ citations_per_publications }}</div>
+                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-3 col-md-6 mb-4">
+          <div class="card border-left-warning shadow h-100 py-2">
+              <div class="card-body">
+                  <div class="row no-gutters align-items-center">
+                      <div class="col mr-2">
+                          <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Scientific Impact</div>
+                          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ scientific_impact }}*</div>
+                          <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+                          <div class="small mb-0 text-gray-700">*More than two times above the international impact of the field</div>
+                      </div>
+                      <div class="col-auto">
+                          <i class="fas fa-info fa-3x text-gray-300"></i>
+                      </div>
+                  </div>
+              </div>
+          </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Average Citations per Articles by Year</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="scientificImpactYearChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Scientific Impact Details</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="impactTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        {% for header in table.headers %}
+                                            <th>{{ header }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        {% for row in table.rows %}
+                                            <tr>
+                                                <td>{{row.year}}</td>
+                                                <td>{{row.publications}}</td>
+                                                <td>{{row.citations}}</td>
+                                                <td>{{row.citations_per_publications}}</td>
+                                                <td>{{row.prop_not_cited_publications}}</td>
+                                                <td>{{row.prop_self_citations}}</td>
+                                                <td>{{row.avg_field_citations}}</td>
+                                                <td>{{row.impact_field}}</td>
+                                                <td>{{row.prop_publications_year}}</td>
+                                                <td>{{row.weighted_impact_field}}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tr>
+                                </tbody>
+                                </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Average Citations per Articles of the INB PIs by Year</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="chart-area">
+                        <canvas id="scientificImpactPIsYearChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
