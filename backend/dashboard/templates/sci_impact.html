@@ -2,9 +2,17 @@
 
 <script>
 {% block javascript %}
-  drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
-  console.log({{ data_pis_chart|safe }})
-  drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
+    drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
+    drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
+    $('#impactTable').DataTable();
+    var div_chart_pis = document.getElementById("chart_pis");
+    html_params = {{ html_params|safe }};
+    if (html_params.show_pis_charts == 1) {
+        div_chart_pis.style.display = "block";
+    }
+    else {
+        div_chart_pis.style.display = "none";
+    }
 {% endblock %}
 </script>
 
@@ -13,7 +21,7 @@
 <div class="container-fluid">
     <!-- Page Heading -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">Spanish National Institute of Bioinformatics</h1>
+        <h1 class="h3 mb-0 text-gray-800">{{ html_params.title }}</h1>
         <!-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
     </div>
     <!-- Summary Cards -->
@@ -76,16 +84,94 @@
                           <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Scientific Impact</div>
                           <div class="h5 mb-0 font-weight-bold text-gray-800">{{ scientific_impact }}*</div>
                           <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
-                          <div class="small mb-0 text-gray-700">*More than two times above the international impact of the field</div>
+                          <div class="small mb-0 text-gray-700">*Indicates whether the performance of the scientist or institution
+                              is below (< 1), about (1) or above (1) the international impact of the field
+                          </div>
                       </div>
-                      <div class="col-auto">
+                      <!-- <div class="col-auto">
                           <i class="fas fa-info fa-3x text-gray-300"></i>
-                      </div>
+                      </div> -->
                   </div>
               </div>
           </div>
         </div>
     </div>
+    <!-- Table -->
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Scientific Impact Details</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="impactTable" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        {% for header in table.headers %}
+                                            {% if forloop.counter == 1 %}
+                                                <th>{{ header }}</th>
+                                            {% else %}
+                                                <th>{{ header }}<sup>{{ forloop.counter|add:-1 }}</sup></th>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in table.rows %}
+                                        <tr>
+                                            <td>{{row.year}}</td>
+                                            <td>{{row.publications}}</td>
+                                            <td>{{row.citations}}</td>
+                                            <td>{{row.citations_per_publications}}</td>
+                                            <td>{{row.prop_not_cited_publications}}</td>
+                                            <td>{{row.prop_self_citations}}</td>
+                                            <td>{{row.avg_field_citations}}</td>
+                                            <td>{{row.impact_field}}</td>
+                                            <td>{{row.prop_publications_year}}</td>
+                                            <td>{{row.weighted_impact_field}}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="bg-secondary text-white">
+                                        <td><b>Total</b></td>
+                                        <td><b>{{ total_publications }}</b></td>
+                                        <td><b>{{ total_citations }}</b></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td></td>
+                                        <td><b>{{ scientific_impact }}<sup>10</sup></b></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="small">
+                        <sup>1</sup>Number of papers published in the indicated period<br>
+                        <sup>2</sup>Total number of citations received by the papers published in the indicated period (from the moment of publication until the moment of analysis)<br>
+                        <sup>3</sup>Mean of citations per publication<br>
+                        <sup>4</sup>Percentage of not-cited papers published in the indicated period<br>
+                        <sup>5</sup>Percentage of self-citations in the indicated period<br>
+                        <sup>6</sup>Average of citations of all papers published in all journals of the field in which the institute/scientist has been active in the indicated period<br>
+                        <sup>7</sup>Impact of the institution/scientist, far below (< 0.5), below (between 0.5 and 0.8), about (between 0.8 and 1.2), above
+                        (between 1.2 and 1.5) and far above (>1.5) the international impact of the field<br>
+                        <sup>8</sup>Proportion of publications considering the total of the period<br>
+                        <sup>9</sup>Impact normalized by the proportion of publication in the indicated period<br>
+                        <sup>10</sup>Overall impact in the indicated period
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- First chart -->
     <div class="row">
         <div class="col-xl-12 col-md-12 mb-4">
             <div class="card shadow mb-4">
@@ -102,51 +188,8 @@
             </div>
         </div>
     </div>
-    <div class="row">
-        <div class="col-xl-12 col-md-12 mb-4">
-            <div class="card shadow mb-4">
-                <!-- Card Header - Dropdown -->
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Scientific Impact Details</h6>
-                </div>
-                <!-- Card Body -->
-                <div class="card-body">
-                    <div class="">
-                        <div class="table-responsive">
-                            <table class="table table-bordered" id="impactTable" width="100%" cellspacing="0">
-                                <thead>
-                                    <tr>
-                                        {% for header in table.headers %}
-                                            <th>{{ header }}</th>
-                                        {% endfor %}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        {% for row in table.rows %}
-                                            <tr>
-                                                <td>{{row.year}}</td>
-                                                <td>{{row.publications}}</td>
-                                                <td>{{row.citations}}</td>
-                                                <td>{{row.citations_per_publications}}</td>
-                                                <td>{{row.prop_not_cited_publications}}</td>
-                                                <td>{{row.prop_self_citations}}</td>
-                                                <td>{{row.avg_field_citations}}</td>
-                                                <td>{{row.impact_field}}</td>
-                                                <td>{{row.prop_publications_year}}</td>
-                                                <td>{{row.weighted_impact_field}}</td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tr>
-                                </tbody>
-                                </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
+    <!-- Second chart -->
+    <div id="chart_pis" class="row">
         <div class="col-xl-12 col-md-12 mb-4">
             <div class="card shadow mb-4">
                 <!-- Card Header - Dropdown -->

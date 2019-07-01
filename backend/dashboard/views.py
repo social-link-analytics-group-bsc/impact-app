@@ -70,7 +70,7 @@ def __prepare_pi_impact_data(pi_obj):
     return pi_impact_data
 
 
-def __prepare_inb_impact_data(impact_name):
+def __prepare_impact_data(impact_name, html_params):
     sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
     sci_impact_start_year, sci_impact_end_year = sci_impact_obj.start_year, sci_impact_obj.end_year
     sci_impact = round(sci_impact_obj.total_weighted_impact, 2)
@@ -112,7 +112,7 @@ def __prepare_inb_impact_data(impact_name):
     }
     data_inb_cpp = {
         'data': cpp_years,
-        'label': 'Avg. citations per article of the INB',
+        'label': 'Avg. citations per article',
         'color': '#4285F4',
         'fill': False
     }
@@ -153,17 +153,40 @@ def __prepare_inb_impact_data(impact_name):
         'citations_per_publications': citations_per_publications,
         'data_inb_chart': json.dumps(data_chart_inb),
         'data_pis_chart': json.dumps(data_chart_pis),
-        'table': {'headers': table_headers, 'rows': table_rows}
+        'table': {'headers': table_headers, 'rows': table_rows},
+        'html_params': html_params
     }
     return context
 
 
-def dashboard_sci_impact(request):
-    impact_ref = request.path.split('/')[-1]
-    impact_name = ''
-    if impact_ref == 'inb' or impact_ref == 'main' or impact_ref == '':
+def dashboard_sci_impact(request, **kwargs):
+    impact_ref = kwargs.get('pi')
+    #impact_ref = request.path.split('/')[-1]
+    mapping_dict = {
+        'carazo': 'Jose M Carazo',
+        'dopazo': 'Joaquin Dopazo',
+        'gelpi': 'Jose L Gelpi',
+        'guigo': 'Roderic Guigo',
+        'gut': 'Ivo G Gut',
+        'navarro': 'Arcadi Navarro',
+        'orozco': 'Modesto Orozco',
+        'sanz': 'Ferran Sanz',
+        'trellez': 'Oswaldo R Trellez',
+        'valencia': 'Alfonso Valencia'
+    }
+    if impact_ref:
+        impact_name = f"Scientific Impact {mapping_dict[impact_ref]} 2009-2016"
+        html_params = {
+            'title': f"Principal Investigator: { mapping_dict[impact_ref]}",
+            'show_pis_charts': 0
+        }
+    else:
         impact_name = 'Scientific Impact INB 2009-2016'
-    context = __prepare_inb_impact_data(impact_name)
+        html_params = {
+            'title': 'Spanish National Institute of Bioinformatics',
+            'show_pis_charts': 1
+        }
+    context = __prepare_impact_data(impact_name, html_params)
     return render(request, "sci_impact.html", context)
 
 
