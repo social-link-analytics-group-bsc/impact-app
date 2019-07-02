@@ -46,7 +46,8 @@ def dashboard_idx(request):
         'start_year': start_year,
         'end_year': end_year,
         'data_articles_chart': json.dumps(data_articles_chart),
-        'data_citations_chart': json.dumps(data_citations_chart)
+        'data_citations_chart': json.dumps(data_citations_chart),
+        'total_projects': 26
     }
     return render(request, "main.html", context)
 
@@ -199,3 +200,7 @@ def dashboard_social_impact(request):
         'social_impact': social_impact
     }
     return render(request, "sci_impact.html", context)
+
+
+def dashboard_sci_impact_methodology(request, **kwargs):
+    return render(request, "sci_impact_methodology.html", {})
