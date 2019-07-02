@@ -1,0 +1,44 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Scientific Impact Methodology</h1>
+        <!-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Data collection and cleaning</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <img class="px-3 px-sm-4" src="{% static 'img/data_collection.svg' %}" alt="" height="132px">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Scientific impact calculation</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <img class="img px-3 px-sm-4" src="{% static 'img/sci_impact_methodology.svg' %}" alt="" height="361px">
+                    <hr>
+                    <p class="small">
+                        * The mean of citations by field and year can be obtained from:
+                        <a href="https://www.recursoscientificos.fecyt.es/servicios/indices-de-impacto">Impact Index</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
