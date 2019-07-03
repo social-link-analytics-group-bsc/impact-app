@@ -5,8 +5,8 @@
       <div class="row no-gutters align-items-center">
         <div class="col mr-2">
             <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Principal Investigators</div>
-            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_pis }}</div>
-            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
+            <div id="total_pis" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+            <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
         </div>
         <div class="col-auto">
           <i class="fas fa-flask fa-3x text-gray-300"></i>
@@ -22,9 +22,9 @@
       <div class="row no-gutters align-items-center">
         <div class="col mr-2">
             <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total articles</div>
-            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_articles }}</div>
-            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
-            <div class="small mb-0 text-gray-700">Source: <b>PubMed</b></div>
+            <div id="total_articles" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+            <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+            <div class="small mb-0 text-gray-700">Source: <b><span id="articles_source"></span></b></div>
         </div>
         <div class="col-auto">
           <i class="fas fa-copy fa-3x text-gray-300"></i>
@@ -40,9 +40,9 @@
       <div class="row no-gutters align-items-center">
         <div class="col mr-2">
             <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Total Citations</div>
-            <div class="h5 mb-0 font-weight-bold">{{ total_citations }}</div>
-            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
-            <div class="small mb-0 text-gray-700">Source: <b>PubMed Central</b></div>
+            <div id="total_citations" class="h5 mb-0 font-weight-bold"></div>
+            <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+            <div class="small mb-0 text-gray-700">Source: <b><span id="citations_source"></span></b></div>
         </div>
         <div class="col-auto">
           <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
@@ -58,9 +58,9 @@
       <div class="row no-gutters align-items-center">
         <div class="col mr-2">
             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total projects</div>
-            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_projects }}</div>
-            <div class="small mb-0">Period: {{ start_year }}-{{ end_year }}</div>
-            <div class="small mb-0 text-gray-700">Source: <b>Cordis</b></div>
+            <div id="total_projects" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+            <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+            <div class="small mb-0 text-gray-700">Source: <b><span id="projects_source"></span></b></div>
         </div>
         <div class="col-auto">
           <i class="fas fa-project-diagram fa-3x text-gray-300"></i>

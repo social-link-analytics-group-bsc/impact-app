@@ -2,8 +2,12 @@
 
 <script>
 {% block javascript %}
-  drawLineChart("articleYearChart", {{ data_articles_chart|safe }}, false, false);
-  drawLineChart("citationYearChart", {{ data_citations_chart|safe }}, false, false);
+  // Get data for summary cards
+  loadSummaryCards();
+  // Get data for the articles by year chart
+  drawArticlesByYearChart();
+  // Get data for the citations by year chart
+  drawCitationsByYearChart();
 {% endblock %}
 </script>
 

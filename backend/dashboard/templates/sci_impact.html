@@ -2,12 +2,15 @@
 
 <script>
 {% block javascript %}
-    drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
-    drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
+    loadSciImpactSummaryCards("{{ impact_obj }}");
     $('#impactTable').DataTable();
+
+    createSciImpactTable(table, header, body);
+    //drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
+    //drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
     var div_chart_pis = document.getElementById("chart_pis");
-    html_params = {{ html_params|safe }};
-    if (html_params.show_pis_charts == 1) {
+    var show_pis_chart = parseInt("{{ show_pis_charts }}");
+    if (show_pis_chart == 1) {
         div_chart_pis.style.display = "block";
     }
     else {
@@ -21,7 +24,7 @@
 <div class="container-fluid">
     <!-- Page Heading -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">{{ html_params.title }}</h1>
+        <h1 class="h3 mb-0 text-gray-800">{{ impact_obj }}</h1>
         <!-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
     </div>
     <!-- Summary Cards -->
@@ -32,9 +35,9 @@
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                     <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total articles</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_publications }}</div>
-                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
-                    <div class="small mb-0 text-gray-700">Source: <b>PubMed</b></div>
+                    <div id="total_articles" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+                    <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+                    <div class="small mb-0 text-gray-700">Source: <b><span id="articles_source"></span></b></div>
                 </div>
                 <div class="col-auto">
                   <i class="fas fa-copy fa-3x text-gray-300"></i>
@@ -49,9 +52,9 @@
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
                     <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Total citations</div>
-                    <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_citations }}</div>
-                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
-                    <div class="small mb-0 text-gray-700">Source: <b>PubMed Central</b></div>
+                    <div id="total_citations" class="h5 mb-0 font-weight-bold"></div>
+                    <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+                    <div class="small mb-0 text-gray-700">Source: <b><span id="citations_source"></span></b></div>
                 </div>
                 <div class="col-auto">
                   <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
@@ -65,9 +68,9 @@
             <div class="card-body">
               <div class="row no-gutters align-items-center">
                 <div class="col mr-2">
-                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average citations per articles</div>
-                    <div class="h5 mb-0 font-weight-bold">{{ citations_per_publications }}</div>
-                    <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Average citations per article</div>
+                    <div id="avg_citations_article" class="h5 mb-0 font-weight-bold"></div>
+                    <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
                 </div>
                 <div class="col-auto">
                   <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
@@ -82,9 +85,9 @@
                   <div class="row no-gutters align-items-center">
                       <div class="col mr-2">
                           <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Scientific Impact</div>
-                          <div class="h5 mb-0 font-weight-bold text-gray-800">{{ scientific_impact }}*</div>
-                          <div class="small mb-0">Period: {{ sci_impact_start_year }}-{{ sci_impact_end_year }}</div>
-                          <div class="small mb-0 text-gray-700">*Indicates whether the performance of the scientist or institution
+                          <div id="scientific_impact_score" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+                          <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+                          <div class="small mb-0 text-gray-700">Indicates whether the performance of the scientist or institution
                               is below (< 1), about (1) or above (1) the international impact of the field
                           </div>
                       </div>

@@ -20,7 +20,6 @@ from django.urls import path
 from django.conf.urls import include
 from rest_framework_swagger.views import get_swagger_view
 from sci_impact.views import index
-from dashboard.views import dashboard_idx, dashboard_sci_impact, dashboard_sci_impact_methodology
 
 schema_view = get_swagger_view(title='Impact App API')
 
@@ -32,14 +31,13 @@ admin.site.unregister(User)
 admin.site.unregister(Group)
 
 urlpatterns = [
-    path('', index, name='index'),  # root endpoint
-    path('dashboard/', dashboard_idx, name='dashboard'),  # dashboard
-    path('dashboard/sci_impact/', dashboard_sci_impact, name='sci_impact'),  # dashboard scientific impact
-    path('dashboard/sci_impact/<str:pi>/', dashboard_sci_impact, name='sci_impact'),  # dashboard scientific impact
-    path('dashboard/sci_impact_methodology/', dashboard_sci_impact_methodology, name='sci_impact_methodology'),
     path('admin/', admin.site.urls),  # admin view
     path('api/', schema_view),  # api root endpoint
-    path('api/sci_impact/', include('sci_impact.urls')),  # sci_impact api endpoints
+    path('api/sci-impact/', include('sci_impact.urls')),  # sci_impact api endpoints
+    path('dashboard/', include('dashboard.urls')),  # dashboard api endpoints
     path('api-auth/', include('rest_framework.urls')),  # authentication
 ]
 
+urlpatterns += [
+    path('', index, name='index'),  # root endpoint
+]

@@ -1,55 +1,11 @@
-import datetime
 import json
-from collections import defaultdict
 from django.db.models import Count, Sum
 from django.shortcuts import render
-from sci_impact.models import Scientist, Article, Impact, ArtifactCitation, ImpactDetail, FieldCitations
+from sci_impact.models import Scientist, Impact, ImpactDetail, FieldCitations
 
 
 def dashboard_idx(request):
-    start_year, end_year = 2003, datetime.datetime.now().year-1
-    articles = Article.objects.filter(year__gte=start_year).filter(year__lte=end_year).\
-        filter(inb_pi_as_author=True)
-    citations = ArtifactCitation.objects.select_related().filter(to_artifact__in=articles)
-    total_pis = Scientist.objects.filter(is_pi_inb=True).count()
-    articles_by_year = articles.values('year').annotate(count=Count('year')).order_by('year')
-    citations_by_year = defaultdict(int)
-    for citation in citations:
-        if citation.from_artifact.year <= end_year:
-            citations_by_year[citation.from_artifact.year] += 1
-    data_articles_chart = {
-        'labels': [dict['year'] for dict in articles_by_year],
-        'datasets': [
-            {
-                'data': [dict['count'] for dict in articles_by_year],
-                'label': 'Articles',
-                'color': '#4285F4',
-                'fill': False
-            }
-        ]
-    }
-    data_citations_chart = {
-        'labels': sorted(citations_by_year.keys()),
-        'datasets': [
-            {
-                'data': [citations_by_year[year] for year in sorted(citations_by_year.keys())],
-                'label': 'Citations',
-                'color': '#17a2b8',
-                'fill': False
-            }
-        ],
-    }
-    context = {
-        'total_pis': total_pis,
-        'total_articles': articles.count(),
-        'total_citations': citations.count(),
-        'start_year': start_year,
-        'end_year': end_year,
-        'data_articles_chart': json.dumps(data_articles_chart),
-        'data_citations_chart': json.dumps(data_citations_chart),
-        'total_projects': 26
-    }
-    return render(request, "main.html", context)
+    return render(request, "main.html", {})
 
 
 def __prepare_pi_impact_data(pi_obj):
@@ -163,31 +119,11 @@ def __prepare_impact_data(impact_name, html_params):
 def dashboard_sci_impact(request, **kwargs):
     impact_ref = kwargs.get('pi')
     #impact_ref = request.path.split('/')[-1]
-    mapping_dict = {
-        'carazo': 'Jose M Carazo',
-        'dopazo': 'Joaquin Dopazo',
-        'gelpi': 'Jose L Gelpi',
-        'guigo': 'Roderic Guigo',
-        'gut': 'Ivo G Gut',
-        'navarro': 'Arcadi Navarro',
-        'orozco': 'Modesto Orozco',
-        'sanz': 'Ferran Sanz',
-        'trellez': 'Oswaldo R Trellez',
-        'valencia': 'Alfonso Valencia'
+    context = {
+        'impact_obj': impact_ref if impact_ref else '',
+        'show_pis_chart': 1 if impact_ref else 0
     }
-    if impact_ref:
-        impact_name = f"Scientific Impact {mapping_dict[impact_ref]} 2009-2016"
-        html_params = {
-            'title': f"Principal Investigator: { mapping_dict[impact_ref]}",
-            'show_pis_charts': 0
-        }
-    else:
-        impact_name = 'Scientific Impact INB 2009-2016'
-        html_params = {
-            'title': 'Spanish National Institute of Bioinformatics',
-            'show_pis_charts': 1
-        }
-    context = __prepare_impact_data(impact_name, html_params)
+    print(context)
     return render(request, "sci_impact.html", context)
 
 
