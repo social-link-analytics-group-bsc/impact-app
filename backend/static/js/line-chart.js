@@ -97,10 +97,5 @@ function drawLineChart(domElementId, data, showLegend, showDataPointLabels){
         });
     }
     myLineChart.update();
-    //if (showDataPointLabels == false) {
-     //   console.log('hola!');
-        //myLineChart.plugins = null;
-        //myLineChart.update();
-    //}
 }
 
