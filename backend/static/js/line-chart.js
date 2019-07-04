@@ -94,8 +94,10 @@ function drawLineChart(domElementId, data, showLegend, showDataPointLabels){
             pointHitRadius: 10,
             pointBorderWidth: 2,
             data: dataset.data,
+            borderDash: dataset.lineType
         });
     }
+    console.log(myLineChart.data.datasets);
     myLineChart.update();
 }
 
