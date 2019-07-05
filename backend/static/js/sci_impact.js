@@ -31,7 +31,16 @@ function drawArticlesByYearChart(){
         method: "GET",
         url: endpoint,
         success: function(data){
-            drawLineChart("articleYearChart", data.chart, false, false);
+            var dataToDraw = {};
+            dataToDraw.labels = data.years;
+            dataToDraw.datasets = [];
+            dataToDraw.datasets.push({
+                "data": data.articles_by_year,
+                "label": "Articles",
+                "color": "#4285F4",
+                "fill": false
+            });
+            drawLineChart("articleYearChart", dataToDraw, false, false);
         },
         error: function(error_data){
             console.log("Error!");
@@ -46,7 +55,16 @@ function drawCitationsByYearChart(){
         method: "GET",
         url: endpoint,
         success: function(data){
-            drawLineChart("citationYearChart", data.chart, false, false);
+            var dataToDraw = {};
+            dataToDraw.labels = data.years;
+            dataToDraw.datasets = [];
+            dataToDraw.datasets.push({
+                "data": data.citations_by_year,
+                "label": 'Citations',
+                "color": '#17a2b8',
+                "fill": false
+            });
+            drawLineChart("citationYearChart", dataToDraw, false, false);
         },
         error: function(error_data){
             console.log("Error!");
@@ -72,6 +90,7 @@ function loadSciImpactSummaryCards(impact_obj) {
                 sy_elements[i].textContent = data.sci_impact_year_range[0];
                 ey_elements[i].textContent = data.sci_impact_year_range[1];
             }
+            document.getElementById("dh-title").innerHTML = data.impact_obj_name;
             document.getElementById("total_articles").innerHTML = data.sci_impact_total_articles;
             document.getElementById("articles_source").textContent = data.articles_source;
             document.getElementById("total_citations").innerHTML = data.sci_impact_total_citations;
@@ -87,43 +106,110 @@ function loadSciImpactSummaryCards(impact_obj) {
 }
 
 function createSciImpactTable(impact_obj) {
-    var table = document.querySelector("table");
     if (impact_obj == '') {
         var endpoint = new URL("api/sci-impact/sci-impact-table", window.location.origin).href;
     }
     else {
         var endpoint = new URL("api/sci-impact/sci-impact-table/".concat(impact_obj), window.location.origin).href;
     }
+    $('#impactTable').DataTable( {
+        "ajax":  {
+            url: endpoint,
+            dataSrc: 'body'
+        },
+        "columns": [
+            { "data": "year" },
+            { "data": "publications" },
+            { "data": "citations" },
+            { "data": "citations_per_publications" },
+            { "data": "prop_not_cited_publications" },
+            { "data": "prop_self_citations" },
+            { "data": "avg_field_citations" },
+            { "data": "impact_field" },
+            { "data": "prop_publications_year" },
+            { "data": "weighted_impact_field" },
+        ]
+    } );
     $.ajax({
         method: "GET",
         url: endpoint,
         success: function(data){
-            var table_div = document.querySelector("table");
-            // generate the header
-            var thead = table_div.createTHead();
-            var thead = table_div.createTHead();
-            var row = thead.insertRow();
-            for (i = 0; i < data.header.length; i++) {
-                var th = document.createElement("th");
-                var text = document.createTextNode(header[i]);
-                th.appendChild(text);
-                row.appendChild(th);
+            document.getElementById("table_total_articles").innerHTML = data.foot.total_publications
+            document.getElementById("table_total_citations").innerHTML = data.foot.total_citations
+            document.getElementById("table_total_impact").innerHTML = data.foot.total_impact + '<sup>a</sup>'
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data);
+        }
+    });
+}
+
+function drawAvgCitationsByYearChart(impact_obj){
+    if (impact_obj == '') {
+        var endpoint = new URL("api/sci-impact/avg-citations-by-year", window.location.origin).href;
+    }
+    else {
+        var endpoint = new URL("api/sci-impact/avg-citations-by-year/".concat(impact_obj), window.location.origin).href;
+    }
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data){
+            var dataToDraw = {};
+            dataToDraw.labels = data.years;
+            dataToDraw.datasets = [];
+            var chartOptions = {
+                "labels": ["Avg. citations per article", "Avg. citations per article in the field"],
+                "colors": ["#4285F4", "#292b2c"],
+                "lineType": [[],[20, 5]]  // solid, dashed
+            };
+            for (i=0; i < data.datasets.length; i++) {
+                dataToDraw.datasets.push({
+                    "data": data.datasets[i],
+                    "label": chartOptions.labels[i],
+                    "color": chartOptions.colors[i],
+                    "fill": false,
+                    "lineType": chartOptions.lineType[i]
+                });
             }
-            // generate the body
-            for (var element of data.body) {
-                var row = table_div.insertRow();
-                for (key in element) {
-                    var cell = row.insertCell();
-                    var text = document.createTextNode(element[key]);
-                    cell.appendChild(text);
-                }
-            }
+            drawLineChart("avgCitationsPerArticleYearChart", dataToDraw, true, false);
         },
         error: function(error_data){
             console.log("Error!");
             console.log(error_data);
         }
     })
+}
 
-
+function drawAvgCitationsByYearPIsChart(impact_obj){
+    var endpoint = new URL("api/sci-impact/avg-citations-by-year-pis", window.location.origin).href;
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data){
+            var dataToDraw = {};
+            dataToDraw.labels = data.years;
+            dataToDraw.datasets = [];
+            var chartOptions = {
+                "colors": ['#3e95cd', '#8e5ea2', '#3cba9f', '#e8c3b9', '#c45850', '#f0ad4e', '#d9534f',
+                           '#a1204f', '#b8c05c', '#4a836d', '#292b2c'],
+                "lineType": [[], [], [], [], [], [], [], [], [], [], [20, 5]]  // solid, dashed
+            };
+            for (i=0; i < data.datasets.length; i++) {
+                dataToDraw.datasets.push({
+                    "data": data.datasets[i],
+                    "label": "Avg. citations per article of ".concat(data.dataset_names[i]),
+                    "color": chartOptions.colors[i],
+                    "fill": false,
+                    "lineType": chartOptions.lineType[i]
+                });
+            }
+            drawLineChart("avgCitationsPerArticlePIsYearChart", dataToDraw, true, false);
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data);
+        }
+    })
 }
