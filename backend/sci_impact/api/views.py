@@ -85,21 +85,9 @@ class ArticlesByYear(APIView):
         article_by_year_objs = articles.values('year').annotate(count=Count('year')).order_by('year')
         years = [dict['year'] for dict in article_by_year_objs]
         articles_by_year = [dict['count'] for dict in article_by_year_objs]
-        chart = {
-            'labels': years,
-            'datasets': [
-                {
-                    'data': articles_by_year,
-                    'label': 'Articles',
-                    'color': '#4285F4',
-                    'fill': False
-                }
-            ]
-        }
         response = {
             'years': years,
             'articles_by_year': articles_by_year,
-            'chart': chart
         }
         return Response(response)
 
@@ -119,21 +107,9 @@ class CitationsByYear(APIView):
                 citations_by_year_dict[citation.from_artifact.year] += 1
         years = sorted(citations_by_year_dict.keys())
         citations_by_year = [citations_by_year_dict[year] for year in sorted(citations_by_year_dict.keys())]
-        chart = {
-            'labels': years,
-            'datasets': [
-                {
-                    'data': citations_by_year,
-                    'label': 'Citations',
-                    'color': '#17a2b8',
-                    'fill': False
-                }
-            ],
-        }
         response = {
             'years': years,
-            'citations_by_year': citations_by_year,
-            'chart': chart
+            'citations_by_year': citations_by_year
         }
         return Response(response)
 
@@ -161,9 +137,12 @@ class SciImpactTotal(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, format=None):
-        impact_obj = request.GET.get('impact_obj')
-        impact_name = f"Scientific Impact {get_impact_obj_name(impact_obj)} 2009-2016"
+    def get(self, request, format=None, **kwargs):
+        impact_obj = kwargs.get('impact_obj')
+        impact_obj_name = get_impact_obj_name(impact_obj)
+        impact_name = f"Scientific Impact {impact_obj_name} 2009-2016"
+        if not impact_obj:
+            impact_obj_name = 'Spanish National Institute of Bioinformatics'
         sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
         sci_impact_year_range = (sci_impact_obj.start_year, sci_impact_obj.end_year)
         sci_impact = round(sci_impact_obj.total_weighted_impact, 2)
@@ -178,7 +157,8 @@ class SciImpactTotal(APIView):
             'sci_impact_total_articles': total_articles,
             'sci_impact_total_citations': total_citations,
             'sci_impact_citations_per_publications': citations_per_publications,
-            'sci_impact_score': sci_impact
+            'sci_impact_score': sci_impact,
+            'impact_obj_name': impact_obj_name
         }
         return Response(response)
 
@@ -187,20 +167,19 @@ class SciImpactTable(APIView):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
 
-    def get(self, request, format=None):
-        impact_obj = request.GET.get('impact_obj')
+    def get(self, request, format=None, **kwargs):
+        impact_obj = kwargs.get('impact_obj')
         impact_name = f"Scientific Impact {get_impact_obj_name(impact_obj)} 2009-2016"
         sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
         sci_impact_details = ImpactDetail.objects.select_related().filter(impact_header=sci_impact_obj)
         years_range = []
-        table_headers = ['Year', 'Publications', 'Citations', 'Citations per Publications', '% Not Cited Publications',
-                         '% Self-citations', 'Avg. Citations in the Field', 'Scientific Impact',
-                         '% Publication of the Total', 'Weighted Impact']
         table_rows, field_cpp_years = [], []
+        total_citations = 0
         for sci_impact_detail in sci_impact_details:
             years_range.append(sci_impact_detail.year)
             fc = FieldCitations.objects.select_related().get(year=sci_impact_detail.year)
             field_cpp_years.append(round(fc.avg_citations_field, 2))
+            total_citations += sci_impact_detail.citations
             table_rows.append(
                 {
                     'year': sci_impact_detail.year,
@@ -215,5 +194,74 @@ class SciImpactTable(APIView):
                     'weighted_impact_field': round(sci_impact_detail.weighted_impact_field, 2)
                 }
             )
-        response = {'header': table_headers, 'body': table_rows}
+        table_foot = {
+            'total_publications': sci_impact_obj.total_publications,
+            'total_citations': total_citations,
+            'total_impact': round(sci_impact_obj.total_weighted_impact,2)
+        }
+        response = {'body': table_rows, 'foot': table_foot}
+        return Response(response)
+
+
+class AvgCitationsByYear(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None, **kwargs):
+        impact_obj = kwargs.get('impact_obj')
+        impact_name = f"Scientific Impact {get_impact_obj_name(impact_obj)} 2009-2016"
+        sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
+        sci_impact_details = ImpactDetail.objects.select_related().filter(impact_header=sci_impact_obj)
+        years, field_cpp_years = [], []
+        for sci_impact_detail in sci_impact_details:
+            years.append(sci_impact_detail.year)
+            fc = FieldCitations.objects.select_related().get(year=sci_impact_detail.year)
+            field_cpp_years.append(round(fc.avg_citations_field, 2))
+        cpp = []
+        for year in years:
+            si = ImpactDetail.objects.select_related().get(impact_header=sci_impact_obj, year=year)
+            cpp.append(round(si.avg_citations_per_publication, 2))
+        response = {
+            'years': years,
+            'datasets': [cpp, field_cpp_years]
+        }
+        return Response(response)
+
+
+def prepare_pi_impact_data(pi_obj):
+    impact_name = f"Scientific Impact {pi_obj} 2009-2016"
+    sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
+    sci_impact_details = ImpactDetail.objects.select_related().filter(impact_header=sci_impact_obj)
+    cpp_years = [{'year': sci_impact_detail.year, 'cpp': round(sci_impact_detail.avg_citations_per_publication, 2)}
+                 for sci_impact_detail in sci_impact_details]
+    pi_impact_data = {
+        'citations_per_publications_year': cpp_years
+    }
+    return pi_impact_data
+
+
+class AvgCitationsByYearPIs(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None):
+        pis_obj = Scientist.objects.select_related().filter(is_pi_inb=True)
+        datasets, dataset_names, years = [], [], []
+        for pi_obj in pis_obj:
+            dataset_names.append(str(pi_obj))
+            pi_impact_data = prepare_pi_impact_data(pi_obj)
+            datasets.append([dict['cpp'] for dict in pi_impact_data['citations_per_publications_year']])
+            if not years:
+                years = [dict['year'] for dict in pi_impact_data['citations_per_publications_year']]
+        field_cpp_years = []
+        for year in years:
+            fc = FieldCitations.objects.select_related().get(year=year)
+            field_cpp_years.append(round(fc.avg_citations_field, 2))
+        datasets.append(field_cpp_years)
+        dataset_names.append('the field')
+        response = {
+            'years': years,
+            'dataset_names': dataset_names,
+            'datasets': datasets
+        }
         return Response(response)

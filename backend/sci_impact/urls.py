@@ -20,9 +20,12 @@ urlpatterns = [
     path('articles-by-year/', views.ArticlesByYear.as_view()),
     path('citations-by-year/', views.CitationsByYear.as_view()),
     path('sci-impact-total-data/', views.SciImpactTotal.as_view()),
-    re_path(r'sci-impact-total-data/[a-z]+/', views.SciImpactTotal.as_view()),
+    path('sci-impact-total-data/<str:impact_obj>/', views.SciImpactTotal.as_view()),
     path('sci-impact-table/', views.SciImpactTable.as_view()),
-    re_path(r'sci-impact-table/[a-z]+/', views.SciImpactTable.as_view())
+    path('sci-impact-table/<str:impact_obj>/', views.SciImpactTable.as_view()),
+    path('avg-citations-by-year/', views.AvgCitationsByYear.as_view()),
+    path('avg-citations-by-year/<str:impact_obj>/', views.AvgCitationsByYear.as_view()),
+    path('avg-citations-by-year-pis/', views.AvgCitationsByYearPIs.as_view()),
 ]
 
 #urlpatterns = format_suffix_patterns(urlpatterns)
