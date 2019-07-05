@@ -27,8 +27,8 @@ class ArticleMgm:
                 country_names.add(alt_country)
             self.__countries.append({'names': list(country_names), 'iso_code': country_obj.iso_code})
 
-    def create_update_venue(self, paper_meta_data, venue_meta_data):
-        venue_dict = {'name': str(venue_meta_data['Title'])}
+    def create_update_venue(self, paper_meta_data, venue_meta_data, user):
+        venue_dict = {'name': str(venue_meta_data['Title']), 'created_by': user}
         if venue_meta_data.get('JournalIssue').get('Volume'):
             venue_dict['volume'] = str(venue_meta_data.get('JournalIssue').get('Volume'))
         if venue_meta_data.get('JournalIssue').get('Issue'):
@@ -82,7 +82,7 @@ class ArticleMgm:
         else:
             return ''
 
-    def create_update_article(self, paper, venue_obj, id_obj):
+    def create_update_article(self, paper, venue_obj, id_obj, user):
         paper_meta_data = paper['MedlineCitation']['Article']
         paper_doi = self.get_paper_doi(paper)
         paper_keywords = self.__get_paper_keywords(paper['MedlineCitation']['Article'])
@@ -93,7 +93,8 @@ class ArticleMgm:
             'academic_db': 'pubmed',
             'venue': venue_obj,
             'repo_id': id_obj,
-            'url': paper_url
+            'url': paper_url,
+            'created_by': user
         }
         if paper_meta_data.get('Language'):
             article_dict['language'] = str(paper_meta_data.get('Language')[0])
@@ -111,12 +112,13 @@ class ArticleMgm:
         article_obj.save()
         return article_obj, True
 
-    def create_update_authorship(self, author_obj, author_index, total_authors, article_obj, institution_obj=None):
+    def create_update_authorship(self, author_obj, author_index, total_authors, article_obj, user, institution_obj=None):
         authorship_dict = {
             'author': author_obj,
             'artifact': article_obj,
             'first_author': author_index == 0,
-            'last_author': author_index == (total_authors - 1)
+            'last_author': author_index == (total_authors - 1),
+            'created_by': user
         }
         if institution_obj:
             authorship_dict['institution'] = institution_obj
@@ -130,10 +132,11 @@ class ArticleMgm:
             authorship_obj.save()
             return authorship_obj, True
 
-    def create_update_scientist(self, author):
+    def create_update_scientist(self, author, user):
         author_dict = {
             'first_name': author['ForeName'],
-            'last_name': author['LastName']
+            'last_name': author['LastName'],
+            'created_by': user
         }
         full_name = author['ForeName'] + ' ' + author['LastName']
         author_dict['gender'] = get_gender(full_name)
@@ -180,8 +183,7 @@ class ArticleMgm:
                     current_affiliation.append(aff.strip())
         return affiliations
 
-    def process_paper(self, num_paper, paper):
-        article_obj = None
+    def process_paper(self, num_paper, paper, user):
         created_objs = {}
         paper_meta_data = paper['MedlineCitation']['Article']
         logger.info(f"[{num_paper}] Processing paper {paper_meta_data['ArticleTitle']}")
@@ -201,7 +203,7 @@ class ArticleMgm:
                     ###
                     # 1) Create/Retrieve paper's venue
                     ###
-                    venue_obj, created = self.create_update_venue(paper_meta_data, venue_meta_data)
+                    venue_obj, created = self.create_update_venue(paper_meta_data, venue_meta_data, user)
                     if created:
                         created_objs['Venue'] = venue_obj
                     ###
@@ -210,7 +212,8 @@ class ArticleMgm:
                     id_dict = {
                         'name': 'PubMed Id',
                         'value': paper_pubmed_id,
-                        'type': 'str'
+                        'type': 'str',
+                        'created_by': user
                     }
                     pubmed_id_obj, created = CustomField.objects.get_or_create(**id_dict)
                     if created:
@@ -218,7 +221,7 @@ class ArticleMgm:
                     ###
                     # 3) Create/Retrieve paper
                     ###
-                    article_obj, created = self.create_update_article(paper, venue_obj, pubmed_id_obj)
+                    article_obj, created = self.create_update_article(paper, venue_obj, pubmed_id_obj, user)
                     if created:
                         created_objs['Article'] = article_obj
                     ###
@@ -244,7 +247,7 @@ class ArticleMgm:
                                     last_name__iexact=author_dict['last_name']
                                 )
                             except Scientist.DoesNotExist:
-                                author_obj = self.create_update_scientist(author)
+                                author_obj = self.create_update_scientist(author, user)
                                 created_objs['Scientist'].append(author_obj)
                             # Update scientists' publication metrics
                             author_obj.articles += 1
@@ -260,7 +263,7 @@ class ArticleMgm:
                             # 5) Create/Retrieve article's authorship
                             ###
                             authorship_obj, created = self.create_update_authorship(author_obj, index, total_authors,
-                                                                                    article_obj)
+                                                                                    article_obj, user)
                             if created:
                                 created_objs['Authorship'].append(authorship_obj)
                             ###
@@ -287,7 +290,8 @@ class ArticleMgm:
                                         )
                                     except Institution.DoesNotExist:
                                         institution_obj = Institution(name=institution_name,
-                                                                      country=institution_country_obj)
+                                                                      country=institution_country_obj,
+                                                                      created_by=user)
                                         institution_obj.save()
                                         created_objs['Institution'].append(institution_obj)
                                     ###
@@ -295,7 +299,8 @@ class ArticleMgm:
                                     ###
                                     affiliation_obj, created = Affiliation.objects.get_or_create(
                                         scientist=author_obj,
-                                        institution=institution_obj
+                                        institution=institution_obj,
+                                        created_by=user
                                     )
                                     if created:
                                         created_objs['Institution'].append(affiliation_obj)

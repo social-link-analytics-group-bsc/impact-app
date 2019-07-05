@@ -2,6 +2,7 @@ from celery.utils.log import get_task_logger
 from celery import shared_task
 from data_collector.pubmed import EntrezClient
 from datetime import date
+from django.contrib.auth.models import User
 from sci_impact.article import ArticleMgm
 from sci_impact.models import ArtifactCitation, Affiliation, Article, Authorship, Scientist
 
@@ -10,12 +11,14 @@ logger = get_task_logger(__name__)
 
 
 @shared_task
-def get_citations(article_ids):
+def get_citations(context):
     logger.info(f"Starting the process of getting citations...")
     ec = EntrezClient()
     am = ArticleMgm()
     citation_objs = []
     num_citations = 0
+    article_ids = context['article_ids']
+    user = User.objects.get(id=context['user_id'])
     for article_id in article_ids:
         article_obj = Article.objects.get(id=article_id)
         saved_citation_author, saved_citation_authorship = False, False
@@ -26,7 +29,7 @@ def get_citations(article_ids):
         if paper_citations:
             logger.info(f"Found {len(paper_citations)} citations for the paper")
             for i, paper_citation in enumerate(paper_citations):
-                article_citation_obj, created_objs = am.process_paper(i, paper_citation)
+                article_citation_obj, created_objs = am.process_paper(i, paper_citation, user)
                 if article_citation_obj:
                     try:
                         ArtifactCitation.objects.get(from_artifact=article_citation_obj,
@@ -35,7 +38,8 @@ def get_citations(article_ids):
                     except ArtifactCitation.DoesNotExist:
                         # 1) Create citation
                         citation_obj = ArtifactCitation(from_artifact=article_citation_obj,
-                                                        to_artifact=article_obj)
+                                                        to_artifact=article_obj,
+                                                        created_by=user)
                         citation_obj.save()
                         citation_objs.append(citation_obj)
                         logger.info('Citation created!')
@@ -65,12 +69,14 @@ def get_citations(article_ids):
 
 
 @shared_task
-def get_references(article_ids):
+def get_references(context):
     logger.info(f"Starting the process of getting references...")
     ec = EntrezClient()
     am = ArticleMgm()
     references_objs = []
     num_references = 0
+    article_ids = context['article_ids']
+    user = User.objects.get(id=context['user_id'])
     for article_id in article_ids:
         article_obj = Article.objects.get(id=article_id)
         logger.info(f"Getting the references of the paper {article_obj.title} ({article_obj.year})")
@@ -81,7 +87,7 @@ def get_references(article_ids):
             continue
         logger.info(f"Found {len(paper_references)} references for the paper")
         for i, paper_reference in enumerate(paper_references):
-            article_reference_obj, created_objs = am.process_paper(i, paper_reference)
+            article_reference_obj, created_objs = am.process_paper(i, paper_reference, user)
             if article_reference_obj:
                 try:
                     ArtifactCitation.objects.get(from_artifact=article_obj,
@@ -90,7 +96,8 @@ def get_references(article_ids):
                 except ArtifactCitation.DoesNotExist:
                     # 1) Create reference
                     ref_obj = ArtifactCitation(from_artifact=article_obj,
-                                               to_artifact=article_reference_obj)
+                                               to_artifact=article_reference_obj,
+                                               created_by=user)
                     ref_obj.save()
                     references_objs.append(ref_obj)
                     logger.info('Reference created!')

@@ -31,6 +31,10 @@ class CountryAdmin(admin.ModelAdmin):
     ordering = ('name',)
     search_fields = ('name',)
 
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
     def load_countries(self, request, queryset):
         api_country = 'https://restcountries.eu/rest/v2/all'
         r = requests.get(api_country)
@@ -58,10 +62,11 @@ class CountryAdmin(admin.ModelAdmin):
             alt_names_str = ', '.join(list_alt_names)
             logger.info(f"Creating country: {country_name}")
             Country.objects.update_or_create(name=country_name, iso_code=country_iso_code,
-                                             defaults={'alternative_names': alt_names_str})
+                                             defaults={'alternative_names': alt_names_str},
+                                             created_by=request.user)
     load_countries.short_description = 'Load list of countries'
 
-
+# still  missing!
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'affiliations', 'articles',
@@ -78,6 +83,10 @@ class ScientistAdmin(admin.ModelAdmin):
     objs_created = defaultdict(list)
     countries = []
     regex = re.compile('[,;]+')
+
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def __get_scientist_affiliations(self, obj):
         all_affiliations = obj.affiliation_set.all().order_by('-departure_date')
@@ -137,7 +146,7 @@ class ScientistAdmin(admin.ModelAdmin):
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
-                article_obj, created_objs = am.process_paper(i, paper)
+                article_obj, created_objs = am.process_paper(i, paper, request.user)
                 for type_obj, objs in created_objs.items():
                     if isinstance(objs, list):
                         self.objs_created[type_obj].extend(article_obj)
@@ -207,15 +216,16 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     mark_as_duplicate.short_description = 'Mark as duplicate'
 
-    def __insert_collaboration_edges(self, edges, nodes_dict):
+    def __insert_collaboration_edges(self, edges, nodes_dict, user):
         logger.info('Inserting the edges and their attributes')
         edges_to_insert, attrs_to_insert = [], []
         for edge_tuple, edge_val in edges.items():
             node_a_obj = nodes_dict.get(edge_tuple[0])
             node_b_obj = nodes_dict.get(edge_tuple[1])
-            edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=node_a_obj.network)
+            edge = NetworkEdge(node_a=node_a_obj, node_b=node_b_obj, network=node_a_obj.network, created_by=user)
             edges_to_insert.append(edge)
-            num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'])
+            num_collaborations_attr = CustomField(name='num_collaborations', value=edge_val['num_collaborations'],
+                                                  created_by=user)
             attrs_to_insert.append(num_collaborations_attr)
         inserted_edges = NetworkEdge.objects.bulk_create(edges_to_insert)
         logger.info('Inserted edges')
@@ -232,15 +242,16 @@ class ScientistAdmin(admin.ModelAdmin):
         NetworkEdge.attrs.through.objects.bulk_create(edge_attrs_to_insert)
         logger.info('Inserted relationship between edges and attributes')
 
-    def __insert_scientist_nodes(self, nodes, network_obj):
+    def __insert_scientist_nodes(self, nodes, network_obj, user):
         logger.info('Inserting nodes and their attributes')
         nodes_to_insert = []
         attributes_to_insert = []
         for node_name, node_info in nodes.items():
-            node_obj = NetworkNode(name=node_name, network=network_obj)
+            node_obj = NetworkNode(name=node_name, network=network_obj, created_by=user)
             nodes_to_insert.append(node_obj)
             for attr_name, attr_info in node_info.items():
-                attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'])
+                attr_obj = CustomField(name=attr_name, value=attr_info['value'], type=attr_info['type'],
+                                       created_by=user)
                 attributes_to_insert.append(attr_obj)
         inserted_nodes = NetworkNode.objects.bulk_create(nodes_to_insert)
         logger.info('Inserted nodes')
@@ -353,12 +364,12 @@ class ScientistAdmin(admin.ModelAdmin):
         # 2) Save record into the DB
         with transaction.atomic():
             net_obj.save()
-            self.__insert_scientist_nodes(nodes, net_obj)
+            self.__insert_scientist_nodes(nodes, net_obj, request.user)
             nodes_db = NetworkNode.objects.filter(network=net_obj)
             nodes_dict = {}
             for node_db in nodes_db:
                 nodes_dict[node_db.name] = node_db
-            self.__insert_collaboration_edges(edges, nodes_dict)
+            self.__insert_collaboration_edges(edges, nodes_dict, request.user)
         msg = f"The collaboration network was computed successfully"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_coauthors_network.short_description = 'Generate collaboration network'
@@ -488,7 +499,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                 logger.info(f"Found a paper that doesn't exist in the database but has the INB PI "
                                              f"{inb_pi_within_authors.last_name + ' ' + inb_pi_within_authors.first_name} "
                                              f"as one of the authors")
-                                am.process_paper(i, paper)
+                                am.process_paper(i, paper, request.user)
         msg = f"{new_authorship} new authorship were created for the {scientists_without_authorship} scientists without " \
               f"authorship"
         self.message_user(request, msg, level=messages.SUCCESS)
@@ -559,6 +570,7 @@ class ScientistAdmin(admin.ModelAdmin):
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_h_index.short_description = 'Compute h-index'
 
+
 @admin.register(Institution)
 class InstitutionAdmin(admin.ModelAdmin):
     list_display = ('name', 'country')
@@ -566,12 +578,21 @@ class InstitutionAdmin(admin.ModelAdmin):
     search_fields = ('name', 'country__name')
     raw_id_fields = ['country', 'region', 'city']  # to increase the loading time of the change view
 
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+
 @admin.register(Affiliation)
 class AffiliationAdmin(admin.ModelAdmin):
     list_display = ('scientist', 'institution', 'joined_date')
     actions = ['fill_join_date', 'remove_duplicated_affiliation']
     search_fields = ('scientist', 'institution')
     raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
+
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def fill_join_date(self, request, queryset):
         affiliation_ids = []
@@ -631,6 +652,10 @@ class ArticleAdmin(admin.ModelAdmin):
                'mark_articles_of_inb_pis']
     raw_id_fields = ['venue', 'repo_id']  # to increase the loading time of the change view
 
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
     def authors(self, obj):
         authorships = Authorship.objects.filter(artifact=obj)
         authors = []
@@ -673,6 +698,7 @@ class ArticleAdmin(admin.ModelAdmin):
         article_ids = []
         for article in queryset:
             article_ids.append(article.id)
+        context = {'article_ids': article_ids, 'user_id': request.user.id}
         get_citations.delay(article_ids)
         msg = f"The process of collecting citations has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
@@ -682,7 +708,8 @@ class ArticleAdmin(admin.ModelAdmin):
         article_ids = []
         for article in queryset:
             article_ids.append(article.id)
-        get_references.delay(article_ids)
+        context = {'article_ids': article_ids, 'user_id': request.user.id}
+        get_references.delay(context)
         msg = f"The process of collecting references has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
     get_references.short_description = 'Get references'
@@ -713,6 +740,10 @@ class AuthorshipAdmin(admin.ModelAdmin):
     search_fields = ('author__first_name', 'author__last_name', 'artifact__title')
     raw_id_fields = ['author', 'artifact', 'institution']  # to increase the loading time of the change view
 
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
     def get_queryset(self, request):
         qs = super().get_queryset(request) #super(AuthorshipAdmin, self).queryset(request)
         qs = qs.distinct('author', 'artifact')
@@ -727,6 +758,10 @@ class NetworkAdmin(admin.ModelAdmin):
     list_display = ('name', 'date', 'num_nodes', 'num_edges')
     ordering = ('name',)
     actions = ['export_network_into_gefx_format']
+
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def num_nodes(self, obj):
         return NetworkNode.objects.filter(network=obj).count()
@@ -809,7 +844,11 @@ class ImpactAdmin(admin.ModelAdmin):
     raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
     autocomplete_fields = ['scientist', 'institution']
 
-    def compute_sci_impact(self, queryset, computation_type='inb'):
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
+    def compute_sci_impact(self, queryset, user, computation_type='inb'):
         for obj in queryset:
             total_publications, total_weighted_impact = 0, 0
             arr_impact_details = []
@@ -856,6 +895,7 @@ class ImpactAdmin(admin.ModelAdmin):
                 weighted_if = impact_details['impact_field'] * prop_py
                 impact_details['weighted_impact_field'] = weighted_if
                 total_weighted_impact += weighted_if
+                impact_details['created_by'] = user
                 id_obj = ImpactDetail(**impact_details)
                 id_obj.save()
             obj.total_publications = total_publications
@@ -863,13 +903,13 @@ class ImpactAdmin(admin.ModelAdmin):
             obj.save()
 
     def compute_sci_impact_scientist(self, request, queryset):
-        self.compute_sci_impact(queryset, computation_type='scientist')
+        self.compute_sci_impact(queryset, request.user, computation_type='scientist')
         msg = f"The computation of the scientific impact was computed successfully!"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_sci_impact_scientist.short_description = 'Compute the Scientific Impact of a Scientist'
 
     def compute_sci_impact_inb(self, request, queryset):
-        self.compute_sci_impact(queryset, computation_type='inb')
+        self.compute_sci_impact(queryset, request.user, computation_type='inb')
         msg = f"The computation of the scientific impact was computed successfully!"
         self.message_user(request, msg, level=messages.SUCCESS)
     compute_sci_impact_inb.short_description = 'Compute the Scientific Impact of the INB'
@@ -885,6 +925,10 @@ class FieldCitationsAdmin(admin.ModelAdmin):
     list_display = ('field', 'source_name', 'source_url', 'year', 'avg_citations_field')
     ordering = ('year',)
 
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
+
 
 @admin.register(ImpactDetail)
 class ImpactDetailAdmin(admin.ModelAdmin):
@@ -893,6 +937,10 @@ class ImpactDetailAdmin(admin.ModelAdmin):
                     'publications_year', 'w_impact_field')
     ordering = ('year',)
     search_fields = ('impact_header__name', )
+
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def citations_per_publication(self, obj):
         return round(obj.avg_citations_per_publication, 2)
@@ -927,6 +975,10 @@ class ImpactDetailAdmin(admin.ModelAdmin):
 class ArtifactCitationAdmin(admin.ModelAdmin):
     list_display = ('from_artifact', 'to_artifact', 'self_citation')
     actions = ['fix_citations']
+
+    def save_model(self, request, obj, form, change):
+        obj.created_by = request.user
+        super().save_model(request, obj, form, change)
 
     def fix_citations(self, request, queryset):
         citation_ids = []
