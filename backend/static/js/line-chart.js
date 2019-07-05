@@ -97,7 +97,6 @@ function drawLineChart(domElementId, data, showLegend, showDataPointLabels){
             borderDash: dataset.lineType
         });
     }
-    console.log(myLineChart.data.datasets);
     myLineChart.update();
 }
 
