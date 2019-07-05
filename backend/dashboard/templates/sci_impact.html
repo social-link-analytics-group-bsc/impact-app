@@ -3,15 +3,13 @@
 <script>
 {% block javascript %}
     loadSciImpactSummaryCards("{{ impact_obj }}");
-    $('#impactTable').DataTable();
-
-    createSciImpactTable(table, header, body);
-    //drawLineChart("scientificImpactYearChart", {{ data_inb_chart|safe }}, true, false);
-    //drawLineChart("scientificImpactPIsYearChart", {{ data_pis_chart|safe }}, true, false);
+    createSciImpactTable("{{ impact_obj }}");
+    drawAvgCitationsByYearChart("{{ impact_obj }}");
     var div_chart_pis = document.getElementById("chart_pis");
-    var show_pis_chart = parseInt("{{ show_pis_charts }}");
+    var show_pis_chart = parseInt("{{ show_pis_chart }}");
     if (show_pis_chart == 1) {
         div_chart_pis.style.display = "block";
+        drawAvgCitationsByYearPIsChart();
     }
     else {
         div_chart_pis.style.display = "none";
@@ -24,7 +22,7 @@
 <div class="container-fluid">
     <!-- Page Heading -->
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">{{ impact_obj }}</h1>
+        <h1 id="dh-title" class="h3 mb-0 text-gray-800"></h1>
         <!-- <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
     </div>
     <!-- Summary Cards -->
@@ -114,43 +112,31 @@
                             <table class="table table-bordered" id="impactTable" width="100%" cellspacing="0">
                                 <thead>
                                     <tr>
-                                        {% for header in table.headers %}
-                                            {% if forloop.counter == 1 %}
-                                                <th>{{ header }}</th>
-                                            {% else %}
-                                                <th>{{ header }}<sup>{{ forloop.counter|add:-1 }}</sup></th>
-                                            {% endif %}
-                                        {% endfor %}
+                                        <th>Year</th>
+                                        <th>Publications<sup>1</sup></th>
+                                        <th>Citations<sup>2</sup></th>
+                                        <th>Citations per Publication<sup>3</sup></th>
+                                        <th>% Not Cited Publications<sup>4</sup></th>
+                                        <th>% Self-citations<sup>5</sup></th>
+                                        <th>Avg. Citations in the Field<sup>6</sup></th>
+                                        <th>Scientific Impact<sup>7</sup></th>
+                                        <th>% Publication of the Total<sup>8</sup></th>
+                                        <th>Weighted Impact<sup>9</sup></th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    {% for row in table.rows %}
-                                        <tr>
-                                            <td>{{row.year}}</td>
-                                            <td>{{row.publications}}</td>
-                                            <td>{{row.citations}}</td>
-                                            <td>{{row.citations_per_publications}}</td>
-                                            <td>{{row.prop_not_cited_publications}}</td>
-                                            <td>{{row.prop_self_citations}}</td>
-                                            <td>{{row.avg_field_citations}}</td>
-                                            <td>{{row.impact_field}}</td>
-                                            <td>{{row.prop_publications_year}}</td>
-                                            <td>{{row.weighted_impact_field}}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
+                                <tbody></tbody>
                                 <tfoot>
                                     <tr class="bg-primary text-white">
-                                        <td><b>Total</b></td>
-                                        <td><b>{{ total_publications }}</b></td>
-                                        <td><b>{{ total_citations }}</b></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td></td>
-                                        <td><b>{{ scientific_impact }}<sup>a</sup></b></td>
+                                        <th>Total</th>
+                                        <th id="table_total_articles"></th>
+                                        <th id="table_total_citations"></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th></th>
+                                        <th id="table_total_impact"></th>
                                     </tr>
                                 </tfoot>
                             </table>
@@ -185,7 +171,7 @@
                 <!-- Card Body -->
                 <div class="card-body">
                     <div class="chart-area">
-                        <canvas id="scientificImpactYearChart"></canvas>
+                        <canvas id="avgCitationsPerArticleYearChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -202,7 +188,7 @@
                 <!-- Card Body -->
                 <div class="card-body">
                     <div class="chart-area">
-                        <canvas id="scientificImpactPIsYearChart"></canvas>
+                        <canvas id="avgCitationsPerArticlePIsYearChart"></canvas>
                     </div>
                 </div>
             </div>

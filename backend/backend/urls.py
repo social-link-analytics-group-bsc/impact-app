@@ -32,6 +32,7 @@ admin.site.unregister(Group)
 
 urlpatterns = [
     path('admin/', admin.site.urls),  # admin view
+    path('accounts/', include('django.contrib.auth.urls')),  # authentication
     path('api/', schema_view),  # api root endpoint
     path('api/sci-impact/', include('sci_impact.urls')),  # sci_impact api endpoints
     path('dashboard/', include('dashboard.urls')),  # dashboard api endpoints

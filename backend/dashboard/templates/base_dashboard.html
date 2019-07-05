@@ -6,54 +6,56 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>ImpactApp - Dashboard</title>
-    <link href="{% static 'vendor/fontawesome-free/css/all.min.css' %}" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" >
     <link href="{% static 'css/sb-admin-2.min.css' %}" rel="stylesheet">
     <!-- <link href="https://cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" rel="stylesheet"> -->
-    <link href="{% static 'vendor/datatables/dataTables.bootstrap4.min.css' %}" rel="stylesheet">
+    <link href="https://cdn.datatables.net/1.10.18/css/dataTables.bootstrap4.min.css" rel="stylesheet">
 </head>
 <body id="page-top">
-    <div id="wrapper">
-        {% include 'sidebar.html' %}  <!-- Sidebar -->
-        <div id="content-wrapper" class="d-flex flex-column">
-            <div id="content">
-                {% include 'top_nav.html' %}  <!-- Top nav bar -->
-                {% block content %}
-                replace me!
-                {% endblock %}
-            </div>
-             <footer class="sticky-footer bg-white">
-                <div class="container my-auto">
-                    <div class="copyright text-center my-auto">
-                        <span>Copyright &copy; ImpactApp 2019</span>
-                    </div>
+    {% if user.is_authenticated %}
+        <div id="wrapper">
+            {% include 'sidebar.html' %}  <!-- Sidebar -->
+            <div id="content-wrapper" class="d-flex flex-column">
+                <div id="content">
+                    {% include 'top_nav.html' %}  <!-- Top nav bar -->
+                    {% block content %}
+                    replace me!
+                    {% endblock %}
                 </div>
-             </footer>
+                 <footer class="sticky-footer bg-white">
+                    <div class="container my-auto">
+                        <div class="copyright text-center my-auto">
+                            <span>Copyright &copy; ImpactApp 2019</span>
+                        </div>
+                    </div>
+                 </footer>
+            </div>
         </div>
-    </div>
-     <!-- Scroll to Top Button-->
-    <a class="scroll-to-top rounded" href="#page-top">
-        <i class="fas fa-angle-up"></i>
-    </a>
-    <!-- Load Jquery -->
-    <script src="{% static 'vendor/jquery/jquery.min.js' %}"></script>
-    <script src="{% static 'vendor/jquery-easing/jquery.easing.min.js' %}"></script>
-    <script src="{% static 'vendor/datatables/jquery.dataTables.min.js' %}"></script>
-    <!-- Load bootstrap-->
-    <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
-    <script src="{% static 'vendor/datatables/dataTables.bootstrap4.min.js' %}"></script>
-    <!-- Load theme -->
-    <script src="{% static 'js/sb-admin-2.min.js' %}"></script>
-    <!-- Load charts-->
-    <script src="{% static 'vendor/chart.js/Chart.min.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-    <script src="{% static 'js/line-chart.js' %}"></script>
-        <!-- Load app functions -->
-    <script src="{% static 'js/sci_impact.js' %}"></script>
-    <script>
-        $(document).ready(function(){
-            {% block javascript %}{% endblock %}
-        })
-    </script>
+         <!-- Scroll to Top Button-->
+        <a class="scroll-to-top rounded" href="#page-top">
+            <i class="fas fa-angle-up"></i>
+        </a>
+        <!-- Load Jquery -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-easing/1.4.1/jquery.easing.min.js"></script>
+        <script src="https://cdn.datatables.net/1.10.18/js/jquery.dataTables.min.js"></script>
+        <!-- Load bootstrap-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+        <script src="https://cdn.datatables.net/1.10.18/js/dataTables.bootstrap4.min.js"></script>
+        <!-- Load theme -->
+        <script src="{% static 'js/sb-admin-2.min.js' %}"></script>
+        <!-- Load charts-->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+        <script src="{% static 'js/line-chart.js' %}"></script>
+            <!-- Load app functions -->
+        <script src="{% static 'js/sci_impact.js' %}"></script>
+        <script>
+            $(document).ready(function(){
+                {% block javascript %}{% endblock %}
+            })
+        </script>
+    {% endif %}
 </body>
 </html>
