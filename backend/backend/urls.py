@@ -27,8 +27,8 @@ schema_view = get_swagger_view(title='Impact App API')
 admin.site.site_header = " "
 admin.site.site_title = "ImpactApp Admin Portal"
 admin.site.index_title = "Welcome to ImpactApp"
-admin.site.unregister(User)
-admin.site.unregister(Group)
+# admin.site.unregister(User)
+# admin.site.unregister(Group)
 
 urlpatterns = [
     path('admin/', admin.site.urls),  # admin view
