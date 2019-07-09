@@ -212,15 +212,16 @@ class AvgCitationsByYear(APIView):
         impact_name = f"Scientific Impact {get_impact_obj_name(impact_obj)} 2009-2016"
         sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
         sci_impact_details = ImpactDetail.objects.select_related().filter(impact_header=sci_impact_obj)
-        years, field_cpp_years = [], []
+        years = []
         for sci_impact_detail in sci_impact_details:
             years.append(sci_impact_detail.year)
-            fc = FieldCitations.objects.select_related().get(year=sci_impact_detail.year)
-            field_cpp_years.append(round(fc.avg_citations_field, 2))
-        cpp = []
+        years = sorted(years)
+        field_cpp_years, cpp = [], []
         for year in years:
             si = ImpactDetail.objects.select_related().get(impact_header=sci_impact_obj, year=year)
             cpp.append(round(si.avg_citations_per_publication, 2))
+            fc = FieldCitations.objects.select_related().get(year=year)
+            field_cpp_years.append(round(fc.avg_citations_field, 2))
         response = {
             'years': years,
             'datasets': [cpp, field_cpp_years]
@@ -234,6 +235,7 @@ def prepare_pi_impact_data(pi_obj):
     sci_impact_details = ImpactDetail.objects.select_related().filter(impact_header=sci_impact_obj)
     cpp_years = [{'year': sci_impact_detail.year, 'cpp': round(sci_impact_detail.avg_citations_per_publication, 2)}
                  for sci_impact_detail in sci_impact_details]
+    cpp_years = sorted(cpp_years, key=lambda k: k['year'])
     pi_impact_data = {
         'citations_per_publications_year': cpp_years
     }
