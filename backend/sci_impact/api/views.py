@@ -1,13 +1,13 @@
 import datetime
 
-from collections import defaultdict
 from django.db.models import Count, Sum
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework import viewsets
-from sci_impact.models import Scientist, Article, ArtifactCitation, Impact, ImpactDetail, FieldCitations
+from sci_impact.models import Scientist, Article, ArtifactCitation, Impact, ImpactDetail, FieldCitations, Artifact, \
+                              Authorship
 from sci_impact.api.serializers import ScientistSerializer, ArticleSerializer
 
 
@@ -260,4 +260,30 @@ class AvgCitationsByYearPIs(APIView):
             'dataset_names': dataset_names,
             'datasets': datasets
         }
+        return Response(response)
+
+
+class ArticlesPI(APIView):
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, format=None, **kwargs):
+        impact_obj = kwargs.get('impact_obj')
+        impact_name = f"Scientific Impact {get_impact_obj_name(impact_obj)} 2009-2016"
+        sci_impact_obj = Impact.objects.select_related().get(name=impact_name)
+        years_range = list(range(sci_impact_obj.start_year, sci_impact_obj.end_year+1))
+        pi_articles = Artifact.objects.filter(pk__in=Authorship.objects.filter(author__id=sci_impact_obj.scientist.id).
+                                              distinct('artifact').values('artifact'), year__in=years_range)
+        table_rows = []
+        for article in pi_articles:
+            article_citations = ArtifactCitation.objects.filter(to_artifact=article).\
+                filter(from_artifact__year__in=years_range).count()
+            table_rows.append(
+                {
+                    'year': article.year,
+                    'title': article.title,
+                    'citations': article_citations
+                }
+            )
+        response = {'body': table_rows}
         return Response(response)

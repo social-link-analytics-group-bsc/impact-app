@@ -9,7 +9,8 @@ def sci_impact(request, **kwargs):
     impact_ref = kwargs.get('pi')
     context = {
         'impact_obj': impact_ref if impact_ref else '',
-        'show_pis_chart': 1 if not impact_ref else 0
+        'show_pis_chart': 1 if not impact_ref else 0,
+        'show_table_papers': 1 if impact_ref else 0
     }
     return render(request, 'sci_impact.html', context)
 

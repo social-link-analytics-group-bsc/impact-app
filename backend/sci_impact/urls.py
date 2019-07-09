@@ -26,6 +26,8 @@ urlpatterns = [
     path('avg-citations-by-year/', views.AvgCitationsByYear.as_view()),
     path('avg-citations-by-year/<str:impact_obj>/', views.AvgCitationsByYear.as_view()),
     path('avg-citations-by-year-pis/', views.AvgCitationsByYearPIs.as_view()),
+    path('articles-table/', views.ArticlesPI.as_view()),
+    path('articles-table/<str:impact_obj>/', views.ArticlesPI.as_view()),
 ]
 
 #urlpatterns = format_suffix_patterns(urlpatterns)

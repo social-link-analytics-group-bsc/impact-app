@@ -213,3 +213,24 @@ function drawAvgCitationsByYearPIsChart(impact_obj){
         }
     })
 }
+
+function createPIPapersTable(impact_obj) {
+    if (impact_obj == '') {
+        var endpoint = new URL("api/sci-impact/articles-table/", window.location.origin).href;
+    }
+    else {
+        var endpoint = new URL("api/sci-impact/articles-table/".concat(impact_obj), window.location.origin).href;
+    }
+    $('#articlesTable').DataTable( {
+        "ajax":  {
+            url: endpoint,
+            dataSrc: 'body'
+        },
+        "columns": [
+            { "data": "year" },
+            { "data": "title" },
+            { "data": "citations" }
+        ]
+    } );
+
+}
