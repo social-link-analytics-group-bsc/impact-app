@@ -97,18 +97,14 @@ class CitationsByYear(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, format=None):
-        year_range = (2003, datetime.datetime.now().year - 1)
-        articles = Article.objects.filter(year__gte=year_range[0]).filter(year__lte=year_range[1]). \
-            filter(inb_pi_as_author=True)
-        citations = ArtifactCitation.objects.select_related().filter(to_artifact__in=articles)
-        citations_by_year_dict = defaultdict(int)
-        for citation in citations:
-            if citation.from_artifact.year <= year_range[1]:
-                citations_by_year_dict[citation.from_artifact.year] += 1
-        years = sorted(citations_by_year_dict.keys())
-        citations_by_year = [citations_by_year_dict[year] for year in sorted(citations_by_year_dict.keys())]
+        years_range = list(range(2003, datetime.datetime.now().year))
+        articles = Article.objects.filter(year__in=years_range).filter(inb_pi_as_author=True)
+        citations = ArtifactCitation.objects.select_related().filter(to_artifact__in=articles).\
+            filter(from_artifact__year__in=years_range).values('from_artifact__year').\
+            annotate(Count('from_artifact__year')).order_by('from_artifact__year')
+        citations_by_year = [dict['from_artifact__year__count'] for dict in citations]
         response = {
-            'years': years,
+            'years': years_range,
             'citations_by_year': citations_by_year
         }
         return Response(response)
