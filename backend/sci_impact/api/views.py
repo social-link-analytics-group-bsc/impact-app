@@ -79,14 +79,12 @@ class ArticlesByYear(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request, format=None):
-        year_range = (2003, datetime.datetime.now().year - 1)
-        articles = Article.objects.filter(year__gte=year_range[0]).filter(year__lte=year_range[1]). \
-            filter(inb_pi_as_author=True)
+        years_range = list(range(2003, datetime.datetime.now().year))
+        articles = Article.objects.filter(year__in=years_range).filter(inb_pi_as_author=True)
         article_by_year_objs = articles.values('year').annotate(count=Count('year')).order_by('year')
-        years = [dict['year'] for dict in article_by_year_objs]
         articles_by_year = [dict['count'] for dict in article_by_year_objs]
         response = {
-            'years': years,
+            'years': years_range,
             'articles_by_year': articles_by_year,
         }
         return Response(response)
