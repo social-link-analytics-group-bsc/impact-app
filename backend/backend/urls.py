@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/sci-impact/', include('sci_impact.urls')),  # sci_impact api endpoints
     path('dashboard/', include('dashboard.urls')),  # dashboard api endpoints
     path('api-auth/', include('rest_framework.urls')),  # authentication
+    path('login_error', index),  # root endpoint
 ]
 
 urlpatterns += [

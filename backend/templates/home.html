@@ -1,7 +1,28 @@
 {% extends 'base.html' %}
 {% load static %}
 
+<script>
+{% block javascript %}
+    var pathname = window.location.pathname;
+    if (pathname == "/login_error") {
+        $("#loginErrorAlert").show();
+        window.setTimeout(function() {
+            $("#loginErrorAlert").fadeTo(300, 0).slideUp(500, function(){
+                $(this).remove();
+            });
+        }, 4000);
+    }
+{% endblock %}
+</script>
+
 {% block content %}
+<!-- Login failure alert -->
+<div id="loginErrorAlert" class="alert alert-danger text-center collapse" role="alert">
+  <strong>Login error!</strong> Please try again.
+  <button type="button" class="close alert-dismissible" data-dismiss="alert">
+    <span aria-hidden="true">&times;</span>
+  </button>
+</div>
 <!-- Navigation -->
 <nav class="navbar navbar-light navbar-expand-lg bg-light static-top" id="mainNav">
     <div class="container">
