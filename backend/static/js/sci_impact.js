@@ -159,11 +159,20 @@ function drawAvgCitationsByYearChart(impact_obj){
             var dataToDraw = {};
             dataToDraw.labels = data.years;
             dataToDraw.datasets = [];
-            var chartOptions = {
-                "labels": ["Avg. citations per article", "Avg. citations per article in the field"],
-                "colors": ["#4285F4", "#292b2c"],
-                "lineType": [[],[20, 5]]  // solid, dashed
-            };
+            if (data.datasets.length == 2) {
+                var chartOptions = {
+                    "labels": ["Avg. citations per article", "Avg. citations per article in the field"],
+                    "colors": ["#4285F4", "#292b2c"],
+                    "lineType": [[],[20, 5]]  // solid, dashed
+                };
+            } else {
+                var chartOptions = {
+                    "labels": ["Avg. citations per article", "Avg. citations per article in the field",
+                               "Avg. citations per article in the INB"],
+                    "colors": ["#8e5ea2", "#292b2c", "#4285F4"],
+                    "lineType": [[],[20, 5], []]  // solid, dashed
+                };
+            }
             for (i=0; i < data.datasets.length; i++) {
                 dataToDraw.datasets.push({
                     "data": data.datasets[i],
