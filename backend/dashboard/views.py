@@ -1,8 +1,12 @@
 from django.shortcuts import render
+from django.conf import settings
 
 
 def index(request):
-    return render(request, "main.html", {})
+    context = {
+        'server_subfolder': settings.SERVER_SUBFOLDER
+    }
+    return render(request, "main.html", context)
 
 
 def sci_impact(request, **kwargs):
@@ -10,7 +14,8 @@ def sci_impact(request, **kwargs):
     context = {
         'impact_obj': impact_ref if impact_ref else '',
         'show_pis_chart': 1 if not impact_ref else 0,
-        'show_table_papers': 1 if impact_ref else 0
+        'show_table_papers': 1 if impact_ref else 0,
+        'server_subfolder': settings.SERVER_SUBFOLDER
     }
     return render(request, 'sci_impact.html', context)
 

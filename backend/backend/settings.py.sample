@@ -19,6 +19,7 @@ CELERY_CACHE_BACKEND = 'django-cache'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SERVER_SUBFOLDER = ''
 
 
 # Quick-start development settings - unsuitable for production

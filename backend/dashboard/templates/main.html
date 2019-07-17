@@ -3,11 +3,11 @@
 <script>
 {% block javascript %}
   // Get data for summary cards
-  loadSummaryCards();
+  loadSummaryCards("{{ server_subfolder }}");
   // Get data for the articles by year chart
-  drawArticlesByYearChart();
+  drawArticlesByYearChart("{{ server_subfolder }}");
   // Get data for the citations by year chart
-  drawCitationsByYearChart();
+  drawCitationsByYearChart("{{ server_subfolder }}");
 {% endblock %}
 </script>
 

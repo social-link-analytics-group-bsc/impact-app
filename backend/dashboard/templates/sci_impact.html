@@ -2,14 +2,14 @@
 
 <script>
 {% block javascript %}
-    loadSciImpactSummaryCards("{{ impact_obj }}");
-    createSciImpactTable("{{ impact_obj }}");
-    drawAvgCitationsByYearChart("{{ impact_obj }}");
+    loadSciImpactSummaryCards("{{ impact_obj }}", "{{ server_subfolder }}");
+    createSciImpactTable("{{ impact_obj }}", "{{ server_subfolder }}");
+    drawAvgCitationsByYearChart("{{ impact_obj }}", "{{ server_subfolder }}");
     var div_chart_pis = document.getElementById("chart_pis");
     var show_pis_chart = parseInt("{{ show_pis_chart }}");
     if (show_pis_chart == 1) {
         div_chart_pis.style.display = "block";
-        drawAvgCitationsByYearPIsChart();
+        drawAvgCitationsByYearPIsChart("{{ server_subfolder }}");
     }
     else {
         div_chart_pis.style.display = "none";
