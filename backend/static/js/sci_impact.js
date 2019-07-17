@@ -233,7 +233,7 @@ function drawAvgCitationsByYearPIsChart(server_subfolder){
     })
 }
 
-function createPIPapersTable(impact_obj, server_subfolder) {
+function createPIPapersTable(server_subfolder) {
     var base_url = getBaseURL(server_subfolder);
     var endpoint = base_url.concat("/", "api/sci-impact/articles-table/");
     if (impact_obj != '') {
