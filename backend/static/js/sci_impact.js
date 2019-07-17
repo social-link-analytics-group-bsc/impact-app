@@ -8,7 +8,8 @@ function getBaseURL(server_subfolder) {
 }
 
 function loadSummaryCards(server_subfolder) {
-    var endpoint = new URL("api/sci-impact/total-data", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/total-data");
     $.ajax({
         method: "GET",
         url: endpoint,
@@ -35,7 +36,8 @@ function loadSummaryCards(server_subfolder) {
 }
 
 function drawArticlesByYearChart(server_subfolder){
-    var endpoint = new URL("api/sci-impact/articles-by-year", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/articles-by-year");
     $.ajax({
         method: "GET",
         url: endpoint,
@@ -59,7 +61,8 @@ function drawArticlesByYearChart(server_subfolder){
 }
 
 function drawCitationsByYearChart(server_subfolder){
-    var endpoint = new URL("api/sci-impact/citations-by-year", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/citations-by-year");
     $.ajax({
         method: "GET",
         url: endpoint,
@@ -83,7 +86,8 @@ function drawCitationsByYearChart(server_subfolder){
 }
 
 function loadSciImpactSummaryCards(impact_obj, server_subfolder) {
-    var endpoint = new URL("api/sci-impact/sci-impact-total-data/", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/sci-impact-total-data/");
     if (impact_obj != '') {
         endpoint = endpoint.concat(impact_obj);
     }
@@ -113,7 +117,8 @@ function loadSciImpactSummaryCards(impact_obj, server_subfolder) {
 }
 
 function createSciImpactTable(impact_obj, server_subfolder) {
-    var endpoint = new URL("api/sci-impact/sci-impact-table/", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/sci-impact-table/");
     if (impact_obj != '') {
         endpoint = endpoint.concat(impact_obj);
     }
@@ -151,7 +156,8 @@ function createSciImpactTable(impact_obj, server_subfolder) {
 }
 
 function drawAvgCitationsByYearChart(impact_obj, server_subfolder){
-    var endpoint = new URL("api/sci-impact/avg-citations-by-year/", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/avg-citations-by-year/");
     if (impact_obj != '') {
         endpoint = endpoint.concat(impact_obj);
     }
@@ -195,7 +201,8 @@ function drawAvgCitationsByYearChart(impact_obj, server_subfolder){
 }
 
 function drawAvgCitationsByYearPIsChart(server_subfolder){
-    var endpoint = new URL("api/sci-impact/avg-citations-by-year-pis", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/avg-citations-by-year-pis");
     $.ajax({
         method: "GET",
         url: endpoint,
@@ -227,7 +234,8 @@ function drawAvgCitationsByYearPIsChart(server_subfolder){
 }
 
 function createPIPapersTable(impact_obj, server_subfolder) {
-    var endpoint = new URL("api/sci-impact/articles-table/", getBaseURL(server_subfolder)).href;
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/sci-impact/articles-table/");
     if (impact_obj != '') {
         endpoint = endpoint.concat(impact_obj);
     }
