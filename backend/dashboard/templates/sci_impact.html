@@ -18,7 +18,7 @@
     var show_table_papers = parseInt("{{ show_table_papers }}");
     if (show_table_papers == 1) {
         div_table_papers.style.display = "block";
-        createPIPapersTable("{{ server_subfolder }}");
+        createPIPapersTable("{{ impact_obj }}", "{{ server_subfolder }}");
     }
     else {
         div_table_papers.style.display = "none";
