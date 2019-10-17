@@ -4,9 +4,18 @@ Impact App is a work-in-progress tool developed by the [Social and Media Impact 
 of the [Barcelona Supercomputing Center](https://www.bsc.es) with the goal of assist organizations and scholars to
 measure the scientific and social impact of their research projects. 
 
+By **scientific impact** we understand the intellectual contribution to a person’s field of study within academia [^1].
+Within the various methods proposed in the literature to measure the scientific impact of research (e.g., [^2], [^3]), we 
+decided to compute it by calculating the normalized impact of the scientific production.
+
+following the methodology employed by the government of Spain to understand the impact of publications authored by scholars working
+in Spanish research institutions.
+
 The **scientific impact** is calculated by computing the normalized impact of the scientific production, which is the 
-methodology employed by the Spanish government to understand the impact of publications authored by scholars working
-in Spanish research institutions.  
+methodology employed by the government of Spain to understand the impact of publications authored by scholars working
+in Spanish research institutions. The central part of the methodology compares the average citations per publication 
+of researchers or institution in a year (or range of years) with the average citation 
+ 
 
 **Social Impact.** ...
 
@@ -53,3 +62,13 @@ the environment variables LC_ALL and/or LC_CTYPE are not defined or do not have 
 
 Please use [Github's issue tracker](https://github.com/ParticipaPY/politic-bots/issues/new) to report issues and 
 suggestions.
+
+## References
+
+[^1]: Penfield, T., Baker, M. J., Scoble, R., & Wykes, M. C. (2014). Assessment, evaluations, and definitions of research 
+impact: A review. Research Evaluation, 23(1), 21-32.
+[^2]: Van Raan, A. F. (2004). Measuring science. In Handbook of quantitative science and technology research (pp. 19-50). 
+Springer, Dordrecht.
+[^3]: Donovan, C. (2007). Introduction: Future pathways for science policy and research assessment: metrics vs peer 
+review, quality vs impact.
+[^4]: Ministerio de Industria, Economía, y Competitiva. (2017). Cálculo del impacto normalizado de la producción científica.
