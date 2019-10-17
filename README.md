@@ -2,18 +2,16 @@
 
 Impact App is a work-in-progress tool developed by the [Social and Media Impact Evaluation group](https://www.bsc.es/discover-bsc/organisation/scientific-structure/social-and-media-impact-evaluation) 
 of the [Barcelona Supercomputing Center](https://www.bsc.es) with the goal of assist organizations and scholars to
-understand the scientific and social impact of the research projects.
+measure the scientific and social impact of their research projects. 
+
+The **scientific impact** is calculated by computing the normalized impact of the scientific production, which is the 
+methodology employed by the Spanish government to understand the impact of publications authored by scholars working
+in Spanish research institutions.  
+
+**Social Impact.** ...
 
 ![ImpactApp Front Page](/screenshots/front_page.png)
-
-## Scientific Impact
-
-Impact App applies a normalized 
-
-## Social Impact
-
-...
-
+ 
 ## Data Sources
 
 Currently, the primary sources of data are [PubMed](https://www.ncbi.nlm.nih.gov/pubmed/) and [PubMedCentral (PMC)](https://www.ncbi.nlm.nih.gov/pmc/). 
@@ -43,3 +41,15 @@ might be because some of these reasons: a) package python-dev is missing; b) pac
 the environment variables LC_ALL and/or LC_CTYPE are not defined or do not have a valid value
 
 7. Create...
+
+## Technologies
+
+1. [Python 3.4](https://www.python.org/downloads/)
+2. [PostgreSQL](https://www.postgresql.org/)
+3. [Django 2.2](https://www.djangoproject.com)
+4. [Biopython](https://biopython.org/)
+
+## Issues
+
+Please use [Github's issue tracker](https://github.com/ParticipaPY/politic-bots/issues/new) to report issues and 
+suggestions.
