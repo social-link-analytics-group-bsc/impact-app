@@ -24,6 +24,22 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 
 
+class ExportCsvMixin:
+    def export_as_csv(self, request, queryset):
+        meta = self.model._meta
+        field_names = [field.name for field in meta.fields]
+
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        writer = csv.writer(response)
+
+        writer.writerow(field_names)
+        for obj in queryset:
+            row = writer.writerow([getattr(obj, field) for field in field_names])
+        return response
+    export_as_csv.short_description = "Export selected as CSV"
+
+
 @admin.register(Country)
 class CountryAdmin(admin.ModelAdmin):
     list_display = ('name', 'iso_code')
@@ -735,10 +751,11 @@ class ArticleAdmin(admin.ModelAdmin):
 
 @admin.register(Authorship)
 class AuthorshipAdmin(admin.ModelAdmin):
-    list_display = ('author', 'artifact', 'first_author', 'year')
+    list_display = ('author', 'article', 'year', 'doi')
     ordering = ('author', 'artifact')
     search_fields = ('author__first_name', 'author__last_name', 'artifact__title')
     raw_id_fields = ['author', 'artifact', 'institution']  # to increase the loading time of the change view
+    actions = ['export_as_csv']
 
     def save_model(self, request, obj, form, change):
         obj.created_by = request.user
@@ -749,8 +766,27 @@ class AuthorshipAdmin(admin.ModelAdmin):
         qs = qs.distinct('author', 'artifact')
         return qs
 
+    def article(self, obj):
+        return obj.artifact.title
+
     def year(self, obj):
         return obj.artifact.year
+
+    def doi(self, obj):
+        return obj.artifact.article.doi
+
+    def export_as_csv(self, request, queryset):
+        meta = self.model._meta
+        field_names = ['Author', 'Title', 'Year', 'DOI']
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
+        writer = csv.writer(response)
+        writer.writerow(field_names)
+        for obj in queryset:
+            info_to_write = [obj.author, obj.artifact.title, obj.artifact.year, obj.artifact.article.doi]
+            writer.writerow(info_to_write)
+        return response
+    export_as_csv.short_description = "Export selected as CSV"
 
 
 @admin.register(Network)
