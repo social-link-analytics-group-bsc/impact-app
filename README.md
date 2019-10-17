@@ -35,19 +35,70 @@ to normalize the assessment of scientific impact.
 The mean of citations by field and year can be obtained from the annual [report](https://www.recursoscientificos.fecyt.es/servicios/indices-de-impacto) 
 of Elsevier.
 
- ### Methodology
+### Methodology
  
 1. Select the range of years of evaluation. There should be at least four years between the current year and the final 
-year of the evaluation period;
+year of the evaluation period. The average "peak" in the number of citations happens in the third to fourth year after 
+publication. A five-year period is then appropriate for impact evaluation [[2](https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf)];
 2. Compute the indicators for each year in the selected range;
 3. Evaluate how the institution performs within their field of activity.
 
-### Example
+### Illustrative Example
 
+Evaluate the scientific impact of a research institute between 2012 and 2015.
 
+| Year | NP | C   | CCP | %Pnc | %sc | FCS | CPP/FCS |
+|------|----|-----|-----|------|-----|-----|---------|
+| 2012 | 70 | 450 | 6.2 | 3    | 7   | 3.1 | 2       |
+| 2013 | 78 | 370 | 4.7 | 5    | 6   | 3.6 | 1.3     |
+| 2014 | 81 | 407 | 5.0 | 7    | 8   | 3.5 | 1.4     |
+| 2015 | 84 | 463 | 5.5 | 4    | 6   | 3.8 | 1.5     |
 
+## Social Impact
 
-**Social Impact.** ...
+Social impact are the social improvements achieved as a consequence of implementing the results of a particular research 
+project or program. The computation of social impact is conducted by applying the Impact methodology [].
+
+### Indicators
+
+1. **Connection** to UN Sustainable Development Goals, EU2020 targets or other similar official targets;
+2. Percentage of **improvement** achieved in relation to the starting situation;
+3. **Transferability** of the impact. The actions developed based on project's findings have been transferred to other 
+contexts besides the original one;
+4. **Social impact published** on scientific journals (with recognized impact), governmental or non-governmental 
+official bodies;
+5. **Sustainability**. The impact achieved by the action developed based on the project’s findings has showed to be sustainable throughout time
+
+### Illustrative Example
+
+| Organization  | Project    | SDG (UN 2030) [1] | % of Improvement achieved [2] | Description of achievement [3]           | Sustainability [4] | Replicability [5] | Social impact report | Score-Impact [6] |
+|---------------|------------|---------------|---------------------------|--------------------------------------|----------------|---------------|----------------------|--------------|
+| Institution A | Project AA | Poverty       | 5%                        | Reduce families in poverty situation | No             | No            | Scientific acticle   | 4            |
+|               | Project BB | Health        | 21%                       | Reduce dengue contagion              | Yes            | Yes           | Official report      | 9            |
+
+[1] Respond to at least one of the 2030 United Nations Social Development Goal (or other similar official social goals 
+like EU2020)
+
+[2] Percentage of the improvement achieved as a result of the actions taken during the programme execution
+
+[3] Textual description of the achievement 
+
+[4] Evidences of the impact after the end of the project life span (Yes/No)
+
+[5] Whether the programme has been implemented in more than one place (city, region, country) (Yes/No)
+
+[6] The score of each impact is assigned according to the criteria that it fulfils:
+
+* 10: The impact meets all the criteria, and has more than 30% of improvement
+* 9: The impact meets all the criteria, and has more than 20% of improvement
+* 8: The impact meets all the criteria, and has more than 10% of improvement
+* 7: The impact meets all the criteria, and has some % of improvement (not available the specific %)
+* 6: The impact responds to UN2030 strategy objectives, has achieved some % of improvement and meets at least 2 of the other criteria
+* 5: The impact responds to UN2030 strategy objectives, has achieved some % of improvement and meets at least 1 of the other criteria
+* 4: The impact responds to UN2030 strategy objectives and has achieved some % of improvement 
+* 3: The impact responds to other societal objectives, has achieved some % of improvement and meets at least 2 of the other criteria
+* 2: The impact responds to other societal objectives, has achieved some % of improvement and meets at least 1 of the other criteria
+* 1: The impact responds to other societal objectives and has achieved some % of improvement
 
 ![ImpactApp Front Page](/screenshots/front_page.png)
  
