@@ -117,13 +117,14 @@ next figures.
 ### Screenshots
 
 ![Initial Dashboard](/screenshots/dashboard_initial.png)
-Initial dashboard showing an overview of the dataset used to compute the scientific impact of an institution
+*Initial dashboard showing an overview of the dataset used to compute the scientific impact of an institution*
 
 ![INB Dashboard](/screenshots/dashboard_inb.png)
-Dashboard outlining an overview of the scientific impact of the institution under study
+*Dashboard outlining an overview of the scientific impact of the institution under study*
 
 ![AV Dashboard](/screenshots/dashboard_av.png)
-Dashboard reporting the results of applying the scientific impact methodology to a researcher of the institution under study 
+*Dashboard reporting the results of applying the scientific impact methodology to a researcher of the institution under 
+study* 
 
 ## Installation
 
@@ -175,13 +176,3 @@ DATABASES = {
 
 Please use [Github's issue tracker](https://github.com/ParticipaPY/politic-bots/issues/new) to report issues and 
 suggestions.
-
-## References
-
-[^1]: Penfield, T., Baker, M. J., Scoble, R., & Wykes, M. C. (2014). Assessment, evaluations, and definitions of research 
-impact: A review. Research Evaluation, 23(1), 21-32.
-[^2]: Van Raan, A. F. (2004). Measuring science. In Handbook of quantitative science and technology research (pp. 19-50). 
-Springer, Dordrecht.
-[^3]: Donovan, C. (2007). Introduction: Future pathways for science policy and research assessment: metrics vs peer 
-review, quality vs impact.
-[^4]: Ministerio de Industria, Economía, y Competitiva. (2017). Cálculo del impacto normalizado de la producción científica.
