@@ -1,17 +1,29 @@
 # Impact App
 
-Impact App is a ...
+Impact App is a work-in-progress tool developed by the [Social and Media Impact Evaluation group](https://www.bsc.es/discover-bsc/organisation/scientific-structure/social-and-media-impact-evaluation) 
+of the [Barcelona Supercomputing Center](https://www.bsc.es) with the goal of assist organizations and scholars to
+understand the scientific and social impact of the research projects.
+
+![ImpactApp Front Page](/screenshots/front_page.png)
+
+## Scientific Impact
+
+Impact App applies a normalized 
+
+## Social Impact
+
+...
 
 ## Data Sources
 
-### PubMed
+Currently, the primary sources of data are [PubMed](https://www.ncbi.nlm.nih.gov/pubmed/) and [PubMedCentral (PMC)](https://www.ncbi.nlm.nih.gov/pmc/). 
+The API of these sources are hit through [Biopython](https://biopython.org/), a PubMed API client.
 
-**Scopus**. Data from Scopus were collected using the [Scopus API client](https://github.com/scopus-api/scopus) 
-developed by Rose, Michael E. and John R. Kitchin.
+## Impact App in Action
 
-### PubMed Central
-
-...
+Starting from a set of researcher names, ImpactApp queries the API of PubMed and PubMedCentral to collect information
+about the articles authored by the given researchers. With these data, the tool computes the scientific impact following
+the methodology mentioned before. The results of this computation is displayed in a dashboard.
 
 
 ## Installation
