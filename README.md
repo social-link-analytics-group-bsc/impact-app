@@ -8,7 +8,7 @@ measure the scientific and social impact of their research projects.
 
 ## Scientific Impact
 
-By **scientific impact** we understand the intellectual contribution to a person’s field of study within academia [[1](https://watermark.silverchair.com/rvt021.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAmkwggJlBgkqhkiG9w0BBwagggJWMIICUgIBADCCAksGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMRj2dd7F4L_cwKEUSAgEQgIICHNp6KnbAQrD7D0xXXvl6LkGQRmKhXYFdTks1uib8Y7xIAb5ast0nr_XaXF0FSm9vyO7KDVmL2-7LdsIdfMiBzu32uuWh1LdgF7YSlg0-nfyNWT5LAPC0sGNAFq4Pg9Zq2VJUwEGO8P1qqYS2rTyXiy_5TbWKwssQ2tDQLU4U3PY4a-n_2N4pvRse2hErI1R2ozB2DpuauH8uPU3TsJog_vK_DJ59-vMM4hcl-QbDpj4iuEmaBXBOdA428WAWZ_A3kvXYL4C2E8z4ugB0--NYD6GU9Qq_5igyA4NvovxL10-P19K4EUE2-ilUF5qOoFWC_ZbyD_ILlsdVGhQ8yiy0y6cEeuyvX8gG5kwyIrFQkfpz1MNUtsuQ8vR9DuJ3CbPHHitxznIEjy1WJBSHzUnG8niknBWJ8PF0tnMw4w1nIvpUn1Ebk8Gd_e2rdblSTxhrxTkmbK3uuHmveR2fzoI4nsCL_OOU9RCPTULkqFLZH8x1JnGC4CcNINQZuCAQOedVb4Rdhe_agXcOdYDwuK6dAc1BUaDPGWZEk-Vt3WMGppQGR52hPL3c6VR-KMS8zFQaOBZwcyzIoLBAg1vvbRfMNbJdUpSpC-5JiWqgU0ElnnHU2-B219-Vvw1jH2CEZwKWHfdqSPN_4LniU6fzyDWI8JEwVBZUFrxZ9bJqemL2iu6s2G5jhCOi2mE1uZ3hzyFEGRDO0Ys2RXIRUWh8dQ)].
+By **scientific impact**, we understand the intellectual contribution to a person’s field of study within academia [[1](https://watermark.silverchair.com/rvt021.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAmkwggJlBgkqhkiG9w0BBwagggJWMIICUgIBADCCAksGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMRj2dd7F4L_cwKEUSAgEQgIICHNp6KnbAQrD7D0xXXvl6LkGQRmKhXYFdTks1uib8Y7xIAb5ast0nr_XaXF0FSm9vyO7KDVmL2-7LdsIdfMiBzu32uuWh1LdgF7YSlg0-nfyNWT5LAPC0sGNAFq4Pg9Zq2VJUwEGO8P1qqYS2rTyXiy_5TbWKwssQ2tDQLU4U3PY4a-n_2N4pvRse2hErI1R2ozB2DpuauH8uPU3TsJog_vK_DJ59-vMM4hcl-QbDpj4iuEmaBXBOdA428WAWZ_A3kvXYL4C2E8z4ugB0--NYD6GU9Qq_5igyA4NvovxL10-P19K4EUE2-ilUF5qOoFWC_ZbyD_ILlsdVGhQ8yiy0y6cEeuyvX8gG5kwyIrFQkfpz1MNUtsuQ8vR9DuJ3CbPHHitxznIEjy1WJBSHzUnG8niknBWJ8PF0tnMw4w1nIvpUn1Ebk8Gd_e2rdblSTxhrxTkmbK3uuHmveR2fzoI4nsCL_OOU9RCPTULkqFLZH8x1JnGC4CcNINQZuCAQOedVb4Rdhe_agXcOdYDwuK6dAc1BUaDPGWZEk-Vt3WMGppQGR52hPL3c6VR-KMS8zFQaOBZwcyzIoLBAg1vvbRfMNbJdUpSpC-5JiWqgU0ElnnHU2-B219-Vvw1jH2CEZwKWHfdqSPN_4LniU6fzyDWI8JEwVBZUFrxZ9bJqemL2iu6s2G5jhCOi2mE1uZ3hzyFEGRDO0Ys2RXIRUWh8dQ)].
 Within the various methods proposed in the literature to measure the scientific impact of research (e.g., [[2](https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf)], 
 [[3](https://academic.oup.com/rev/article/25/3/264/2364634)], [[4](https://www.researchgate.net/profile/Marc_Luwel/publication/226564764_The_Use_of_Input_Data_in_the_Performance_Analysis_of_RD_Systems/links/00b7d51834c299d9a9000000/The-Use-of-Input-Data-in-the-Performance-Analysis-of-R-D-Systems.pdf)]), 
 we decided to employ the method called *normalized impact of the scientific production*, which is the methodology employed
@@ -25,7 +25,7 @@ institutions [[5](http://www.ciencia.gob.es/stfls/MICINN/Ayudas/PE_2017_2020/PE_
 | Percentage of not-cited papers (%ncP) | Proportion of papers that did not receive citations                                                                                                       |
 | Percentage of self-citation (%sc)     | Proportion of citations in which the list of authors of the citing paper match the list of authors of the cited paper                                     |
 
-To understand whether a certain number of citations or a specific value of citations per publications is low or high, we 
+To understand whether a certain number of citations or a specific value of citations per publication is low or high, we 
 compare them against some reference value. The following indicators are the international reference values used 
 to normalize the assessment of scientific impact.
 
@@ -40,10 +40,10 @@ of Elsevier.
 ### Methodology
  
 1. Select the range of years of evaluation. There should be at least four years between the current year and the final 
-year of the evaluation period. The average "peak" in the number of citations happens in the third to fourth year after 
+year of the evaluation period. The average "peak" in the number of citations happens in the third to a fourth-year after 
 publication. A five-year period is then appropriate for impact evaluation [[2](https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf)];
 2. Compute the indicators for each year in the selected range;
-3. Evaluate how the institution performs within their field of activity.
+3. Evaluate how the institution performs within its field of activity.
 
 ### Illustrative Example
 
@@ -63,18 +63,19 @@ The API of these sources are hit through [Biopython](https://biopython.org/)—a
 
 ## Social Impact
 
-Social impact are the social improvements achieved as a consequence of implementing the results of a particular research 
-project or program. The computation of social impact is conducted by applying the Impact methodology [[6](https://research.vu.nl/en/publications/monitoring-the-impact-of-eu-framework-programmes)].
+Social impact is the social improvements achieved as a consequence of implementing the results of a particular research 
+project or program. The computation of social impact is conducted by applying the Impact methodology proposed to monitor
+the impact of projects funded by the European Union [[6](https://research.vu.nl/en/publications/monitoring-the-impact-of-eu-framework-programmes)].
 
 ### Indicators
 
 1. **Connection** to UN Sustainable Development Goals, EU2020 targets or other similar official targets;
-2. Percentage of **improvement** achieved in relation to the starting situation;
-3. **Transferability** of the impact. The actions developed based on project's findings have been transferred to other 
+2. Percentage of **improvement** achieved concerning the starting situation;
+3. **Transferability** of the impact. The actions developed based on the project's findings have been transferred to other 
 contexts besides the original one;
 4. **Social impact published** on scientific journals (with recognized impact), governmental or non-governmental 
 official bodies;
-5. **Sustainability**. The impact achieved by the action developed based on the project’s findings has showed to be sustainable throughout time
+5. **Sustainability**. The impact achieved by the action developed based on the project’s findings has shown to be sustainable throughout time
 
 ### Illustrative Example
 
@@ -110,8 +111,8 @@ like EU2020)
 ## Impact App in Action
 
 Starting from a group of researcher names, ImpactApp queries the API of PubMed and PubMedCentral to collect information
-about the articles authored by the given researchers. With these data, the tool computes the scientific impact following
-the methodology mentioned before. The results of this computation is graphically displayed in dashboards, as shown in the
+about the articles authored by the given researchers. With this data, the tool computes the scientific impact following
+the methodology mentioned before. The results of this computation are graphically displayed in dashboards, as shown in the
 next figures.
 
 ### Screenshots
@@ -120,7 +121,7 @@ next figures.
 *Initial dashboard showing an overview of the dataset used to compute the scientific impact of an institution*
 
 ![INB Dashboard](/screenshots/dashboard_inb.png)
-*Dashboard outlining an overview of the scientific impact of the institution under study*
+*Dashboard outlining an overview of the scientific impact of the institution understudy*
 
 ![AV Dashboard](/screenshots/dashboard_av.png)
 *Dashboard reporting the results of applying the scientific impact methodology to a researcher of the institution under 
