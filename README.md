@@ -59,12 +59,12 @@ Evaluate the scientific impact of a research institute between 2012 and 2015.
 ### Data Sources
 
 Currently, the primary sources of data are [PubMed](https://www.ncbi.nlm.nih.gov/pubmed/) and [PubMedCentral (PMC)](https://www.ncbi.nlm.nih.gov/pmc/). 
-The API of these sources are hit through [Biopython](https://biopython.org/), a PubMed API client.
+The API of these sources are hit through [Biopython](https://biopython.org/)—a PubMed API client.
 
 ## Social Impact
 
 Social impact are the social improvements achieved as a consequence of implementing the results of a particular research 
-project or program. The computation of social impact is conducted by applying the Impact methodology [].
+project or program. The computation of social impact is conducted by applying the Impact methodology [[6](https://research.vu.nl/en/publications/monitoring-the-impact-of-eu-framework-programmes)].
 
 ### Indicators
 
@@ -109,9 +109,19 @@ like EU2020)
 
 ## Impact App in Action
 
-Starting from a set of researcher names, ImpactApp queries the API of PubMed and PubMedCentral to collect information
+Starting from a group of researcher names, ImpactApp queries the API of PubMed and PubMedCentral to collect information
 about the articles authored by the given researchers. With these data, the tool computes the scientific impact following
-the methodology mentioned before. The results of this computation is displayed in a dashboard.
+the methodology mentioned before. The results of this computation is graphically displayed in dashboards, as shown in the
+next figures.
+
+![Initial Dashboard](/screenshots/dashboard_initial.png)
+Initial dashboard showing an overview of the dataset
+
+![INB Dashboard](/screenshots/dashboard_inb.png)
+Dashboard outlining the results of applying the scientific impact methodology to an institution
+
+![AV Dashboard](/screenshots/dashboard_av.png)
+Dashboard outlining the results of applying the scientific impact methodology to a researcher
 
 ## Installation
 
