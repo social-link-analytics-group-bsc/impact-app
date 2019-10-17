@@ -4,18 +4,48 @@ Impact App is a work-in-progress tool developed by the [Social and Media Impact 
 of the [Barcelona Supercomputing Center](https://www.bsc.es) with the goal of assist organizations and scholars to
 measure the scientific and social impact of their research projects. 
 
-By **scientific impact** we understand the intellectual contribution to a person’s field of study within academia [^1].
-Within the various methods proposed in the literature to measure the scientific impact of research (e.g., [^2], [^3]), we 
-decided to compute it by calculating the normalized impact of the scientific production.
+## Scientific Impact
 
-following the methodology employed by the government of Spain to understand the impact of publications authored by scholars working
-in Spanish research institutions.
+By **scientific impact** we understand the intellectual contribution to a person’s field of study within academia [[1](https://watermark.silverchair.com/rvt021.pdf?token=AQECAHi208BE49Ooan9kkhW_Ercy7Dm3ZL_9Cf3qfKAc485ysgAAAmkwggJlBgkqhkiG9w0BBwagggJWMIICUgIBADCCAksGCSqGSIb3DQEHATAeBglghkgBZQMEAS4wEQQMRj2dd7F4L_cwKEUSAgEQgIICHNp6KnbAQrD7D0xXXvl6LkGQRmKhXYFdTks1uib8Y7xIAb5ast0nr_XaXF0FSm9vyO7KDVmL2-7LdsIdfMiBzu32uuWh1LdgF7YSlg0-nfyNWT5LAPC0sGNAFq4Pg9Zq2VJUwEGO8P1qqYS2rTyXiy_5TbWKwssQ2tDQLU4U3PY4a-n_2N4pvRse2hErI1R2ozB2DpuauH8uPU3TsJog_vK_DJ59-vMM4hcl-QbDpj4iuEmaBXBOdA428WAWZ_A3kvXYL4C2E8z4ugB0--NYD6GU9Qq_5igyA4NvovxL10-P19K4EUE2-ilUF5qOoFWC_ZbyD_ILlsdVGhQ8yiy0y6cEeuyvX8gG5kwyIrFQkfpz1MNUtsuQ8vR9DuJ3CbPHHitxznIEjy1WJBSHzUnG8niknBWJ8PF0tnMw4w1nIvpUn1Ebk8Gd_e2rdblSTxhrxTkmbK3uuHmveR2fzoI4nsCL_OOU9RCPTULkqFLZH8x1JnGC4CcNINQZuCAQOedVb4Rdhe_agXcOdYDwuK6dAc1BUaDPGWZEk-Vt3WMGppQGR52hPL3c6VR-KMS8zFQaOBZwcyzIoLBAg1vvbRfMNbJdUpSpC-5JiWqgU0ElnnHU2-B219-Vvw1jH2CEZwKWHfdqSPN_4LniU6fzyDWI8JEwVBZUFrxZ9bJqemL2iu6s2G5jhCOi2mE1uZ3hzyFEGRDO0Ys2RXIRUWh8dQ)].
+Within the various methods proposed in the literature to measure the scientific impact of research (e.g., [[2](https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf)], 
+[[3](https://academic.oup.com/rev/article/25/3/264/2364634)], [[4](https://www.researchgate.net/profile/Marc_Luwel/publication/226564764_The_Use_of_Input_Data_in_the_Performance_Analysis_of_RD_Systems/links/00b7d51834c299d9a9000000/The-Use-of-Input-Data-in-the-Performance-Analysis-of-R-D-Systems.pdf)]), 
+we decided to employ the method called *normalized impact of the scientific production*, which is the methodology employed
+by the government of Spain to understand the impact of publications authored by scholars working in the country's research 
+institutions [[5](http://www.ciencia.gob.es/stfls/MICINN/Ayudas/PE_2017_2020/PE_Generacion_Conocimiento_Fortalecimiento_Cientifico_Tecnologico/Subprograma_Fortalecimiento_Institucional/FICHEROS/Centros_Excelencia_Severo_Ochoa_y_Unidades_Excelencia_Maria_Maeztu_2018/Calculo_IN_definitivo.pdf)].
 
-The **scientific impact** is calculated by computing the normalized impact of the scientific production, which is the 
-methodology employed by the government of Spain to understand the impact of publications authored by scholars working
-in Spanish research institutions. The central part of the methodology compares the average citations per publication 
-of researchers or institution in a year (or range of years) with the average citation 
+### Indicators
+
+| Name                                  | Description                                                                                                                                               |
+|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Number of publications (NP)           | Number of papers published by the organization (or researcher). Papers are considered normal articles published in journals and in conference proceedings |
+| Number of citations (C)               | Total citations received by NP                                                                                                                            |
+| Mean of citations per paper (CPP)     | Average number of citations per publications                                                                                                              |
+| Percentage of not-cited papers (%ncP) | Proportion of papers that did not receive citations                                                                                                       |
+| Percentage of self-citation (%sc)     | Proportion of citations in which the list of authors of the citing paper match the list of authors of the cited paper                                     |
+
+To understand whether a certain number of citations or a specific value of citations per publications is low or high, we 
+compare them against some reference value. The following indicators are the international reference values used 
+to normalize the assessment of scientific impact.
+
+| Name                                  | Description                                                                                                                                               |
+|---------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Mean of field citation score (FCS)    | Average of citations of all papers published in all journals of the field in which the institute has been active                                          |
+| CPP/FCS                               | Whether or not the average citations per publications is above (or below) the international average in the field                                          |
+
+The mean of citations by field and year can be obtained from the annual [report](https://www.recursoscientificos.fecyt.es/servicios/indices-de-impacto) 
+of Elsevier.
+
+ ### Methodology
  
+1. Select the range of years of evaluation. There should be at least four years between the current year and the final 
+year of the evaluation period;
+2. Compute the indicators for each year in the selected range;
+3. Evaluate how the institution performs within their field of activity.
+
+### Example
+
+
+
 
 **Social Impact.** ...
 
