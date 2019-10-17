@@ -137,7 +137,7 @@ class SciImpactTotal(APIView):
         impact_obj_name = get_impact_obj_name(impact_obj)
         impact_name = f"Scientific Impact {impact_obj_name} 2009-2016"
         if not impact_obj:
-            impact_obj_name = 'Spanish National Institute of Bioinformatics'
+            impact_obj_name = 'Spanish National Institute of Bioinformatics (Est. 2009)'
         sci_impact_obj = Impact.objects.select_related().get(name=impact_name, created_by=request.user)
         sci_impact_year_range = (sci_impact_obj.start_year, sci_impact_obj.end_year)
         sci_impact = round(sci_impact_obj.total_weighted_impact, 2)
