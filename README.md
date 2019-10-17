@@ -114,14 +114,16 @@ about the articles authored by the given researchers. With these data, the tool 
 the methodology mentioned before. The results of this computation is graphically displayed in dashboards, as shown in the
 next figures.
 
+### Screenshots
+
 ![Initial Dashboard](/screenshots/dashboard_initial.png)
-Initial dashboard showing an overview of the dataset
+Initial dashboard showing an overview of the dataset used to compute the scientific impact of an institution
 
 ![INB Dashboard](/screenshots/dashboard_inb.png)
-Dashboard outlining the results of applying the scientific impact methodology to an institution
+Dashboard outlining an overview of the scientific impact of the institution under study
 
 ![AV Dashboard](/screenshots/dashboard_av.png)
-Dashboard outlining the results of applying the scientific impact methodology to a researcher
+Dashboard reporting the results of applying the scientific impact methodology to a researcher of the institution under study 
 
 ## Installation
 
@@ -139,7 +141,28 @@ Dashboard outlining the results of applying the scientific impact methodology to
 might be because some of these reasons: a) package python-dev is missing; b) package libmysqlclient-dev is missing c) 
 the environment variables LC_ALL and/or LC_CTYPE are not defined or do not have a valid value
 
-7. Create...
+7. Create a PostgreSQL database. Make sure your database collation is set to UTF-8
+
+8. Rename the file backend/backend/settings.py.example as backend/backend/settings.py
+
+9. Set the configuration parameters of the database in backend/backend/settings.py
+```
+DATABASES = {
+    ...
+        'NAME': '',
+        'USER': '',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    ...
+}
+```
+
+10. Run `python manage.py migrate` to set up the database schema
+
+11. Run `python manage.py createsuperuser` to create an admin user
+
+12. Run the Django server by running the following command `python manage.py runserver locahost:8000`
 
 ## Technologies
 
