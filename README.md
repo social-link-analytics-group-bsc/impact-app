@@ -2,7 +2,9 @@
 
 Impact App is a work-in-progress tool developed by the [Social and Media Impact Evaluation group](https://www.bsc.es/discover-bsc/organisation/scientific-structure/social-and-media-impact-evaluation) 
 of the [Barcelona Supercomputing Center](https://www.bsc.es) with the goal of assist organizations and scholars to
-measure the scientific and social impact of their research projects. 
+measure the scientific and social impact of their research projects.
+
+![ImpactApp Front Page](/screenshots/front_page.png)
 
 ## Scientific Impact
 
@@ -54,6 +56,11 @@ Evaluate the scientific impact of a research institute between 2012 and 2015.
 | 2014 | 81 | 407 | 5.0 | 7    | 8   | 3.5 | 1.4     |
 | 2015 | 84 | 463 | 5.5 | 4    | 6   | 3.8 | 1.5     |
 
+### Data Sources
+
+Currently, the primary sources of data are [PubMed](https://www.ncbi.nlm.nih.gov/pubmed/) and [PubMedCentral (PMC)](https://www.ncbi.nlm.nih.gov/pmc/). 
+The API of these sources are hit through [Biopython](https://biopython.org/), a PubMed API client.
+
 ## Social Impact
 
 Social impact are the social improvements achieved as a consequence of implementing the results of a particular research 
@@ -100,19 +107,11 @@ like EU2020)
 * 2: The impact responds to other societal objectives, has achieved some % of improvement and meets at least 1 of the other criteria
 * 1: The impact responds to other societal objectives and has achieved some % of improvement
 
-![ImpactApp Front Page](/screenshots/front_page.png)
- 
-## Data Sources
-
-Currently, the primary sources of data are [PubMed](https://www.ncbi.nlm.nih.gov/pubmed/) and [PubMedCentral (PMC)](https://www.ncbi.nlm.nih.gov/pmc/). 
-The API of these sources are hit through [Biopython](https://biopython.org/), a PubMed API client.
-
 ## Impact App in Action
 
 Starting from a set of researcher names, ImpactApp queries the API of PubMed and PubMedCentral to collect information
 about the articles authored by the given researchers. With these data, the tool computes the scientific impact following
 the methodology mentioned before. The results of this computation is displayed in a dashboard.
-
 
 ## Installation
 
