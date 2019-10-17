@@ -13,7 +13,7 @@ coreapi==2.3.3
 coreschema==0.0.4
 cryptography==2.6.1
 cycler==0.10.0
-Django==2.1.7
+Django==2.2.6
 django-admin-multiple-choice-list-filter==0.1.1
 django-celery-results==1.1.1
 django-jet==1.0.8
@@ -49,6 +49,7 @@ scholarly==0.2.4
 simplejson==3.16.0
 six==1.12.0
 soupsieve==1.9
+sqlparse==0.3.0
 strsim==0.0.3
 uritemplate==3.0.0
 urllib3==1.25
