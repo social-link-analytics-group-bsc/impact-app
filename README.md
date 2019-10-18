@@ -181,3 +181,7 @@ DATABASES = {
 
 Please use [Github's issue tracker](https://github.com/ParticipaPY/politic-bots/issues/new) to report issues and 
 suggestions.
+
+## Contributors
+
+[Jorge Saldivar](https://github.com/joausaga), María José Rementería, and Salvador Capella
