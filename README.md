@@ -127,6 +127,10 @@ next figures.
 *Dashboard reporting the results of applying the scientific impact methodology to a researcher of the institution under 
 study* 
 
+### Live Demo
+
+A live demo of the application is available [here](http://socialanalytics.bsc.es/impactapp/)
+
 ## Installation
 
 1. Run `git clone https://github.com/social-link-analytics-group-bsc/impact-app.git`
