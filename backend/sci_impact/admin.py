@@ -162,14 +162,39 @@ class ScientistAdmin(admin.ModelAdmin):
             results = ec.search(f"{scientist_name}[author]")
             papers = ec.fetch_in_batch_from_history(results['Count'], results['WebEnv'], results['QueryKey'])
             for i, paper in enumerate(papers):
-                article_obj, created_objs = am.process_paper(i, paper, request.user)
+                article_obj, created_objs = am.process_pubmed_paper(i, paper, request.user)
                 for type_obj, objs in created_objs.items():
                     if isinstance(objs, list):
                         self.objs_created[type_obj].extend(article_obj)
                     else:
                         self.objs_created[type_obj].append(article_obj)
         self.__display_feedback_msg(request)
-    get_articles_pubmed.short_description = 'Get articles (source: PubMed)'
+    get_articles_pubmed.short_description = 'Get articles from PubMed'
+
+    def import_scopus_data(self, request, queryset):
+        am = ArticleMgm()
+        scopus_data_dir = pathlib.Path('..', 'scopus_data')
+        for scientist_obj in queryset:
+            scientist_name = scientist_obj.first_name[0].lower() + scientist_obj.last_name.lower()
+            file_name = scientist_name + '.csv'
+            logging.info(f"\nProcessing: {file_name}")
+            scopus_file_name = scopus_data_dir.joinpath(file_name)
+            try:
+                with open(str(scopus_file_name), 'r', encoding='utf-8') as f:
+                    file = csv.DictReader(f, delimiter=',')
+                    paper_index = 0
+                    for paper_line in file:
+                        article_obj, created_objs = am.process_scopus_paper(paper_index, paper_line, scientist_obj,
+                                                                            request.user)
+                        for type_obj, objs in created_objs.items():
+                            if isinstance(objs, list):
+                                self.objs_created[type_obj].extend(article_obj)
+                            else:
+                                self.objs_created[type_obj].append(article_obj)
+                    self.__display_feedback_msg(request)
+            except Exception as e:
+                self.message_user(request, str(e), level=messages.error)
+    import_scopus_data.short_description = 'Import articles from Scopus files'
 
     def remove_duplicates(self, request, queryset):
         duplicate_scientists = []
@@ -515,7 +540,7 @@ class ScientistAdmin(admin.ModelAdmin):
                                 logger.info(f"Found a paper that doesn't exist in the database but has the INB PI "
                                              f"{inb_pi_within_authors.last_name + ' ' + inb_pi_within_authors.first_name} "
                                              f"as one of the authors")
-                                am.process_paper(i, paper, request.user)
+                                am.process_pubmed_paper(i, paper, request.user)
         msg = f"{new_authorship} new authorship were created for the {scientists_without_authorship} scientists without " \
               f"authorship"
         self.message_user(request, msg, level=messages.SUCCESS)

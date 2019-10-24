@@ -276,6 +276,7 @@ class Article(Artifact):
     keywords = models.CharField(max_length=300, null=True, blank=True)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE)
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
+    funding_details = models.TextField(null=True, blank=True)
     # publication id on academic repositories
     repo_id = models.ForeignKey(CustomField, on_delete=models.CASCADE)
     # other fields

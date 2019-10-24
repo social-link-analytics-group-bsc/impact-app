@@ -27,7 +27,7 @@ class ArticleMgm:
                 country_names.add(alt_country)
             self.__countries.append({'names': list(country_names), 'iso_code': country_obj.iso_code})
 
-    def create_update_venue(self, paper_meta_data, venue_meta_data, user):
+    def __prepare_venue_dict_from_pubmed(self, paper_meta_data, venue_meta_data, user):
         venue_dict = {'name': str(venue_meta_data['Title']), 'created_by': user}
         if venue_meta_data.get('JournalIssue').get('Volume'):
             venue_dict['volume'] = str(venue_meta_data.get('JournalIssue').get('Volume'))
@@ -47,6 +47,9 @@ class ArticleMgm:
             venue_dict['type'] = 'proceeding'
         else:
             venue_dict['type'] = 'other'
+        return venue_dict
+
+    def create_update_venue(self, venue_dict):
         try:
             venue_obj = Venue.objects.get(name__iexact=venue_dict['name'], type__exact=venue_dict['type'])
             Venue.objects.filter(name__iexact=venue_dict['name'], type__exact=venue_dict['type']).update(**venue_dict)
@@ -82,7 +85,7 @@ class ArticleMgm:
         else:
             return ''
 
-    def create_update_article(self, paper, venue_obj, id_obj, user):
+    def __prepare_paper_dict_from_pubmed(self, paper, venue_obj, id_obj, user):
         paper_meta_data = paper['MedlineCitation']['Article']
         paper_doi = self.get_paper_doi(paper)
         paper_keywords = self.__get_paper_keywords(paper['MedlineCitation']['Article'])
@@ -108,6 +111,9 @@ class ArticleMgm:
             raise Exception(f"Couldn't find the year of the article {article_dict['title']}")
         if paper_keywords:
             article_dict['keywords'] = paper_keywords
+        return article_dict
+
+    def create_update_article(self, article_dict):
         article_obj = Article(**article_dict)
         article_obj.save()
         return article_obj, True
@@ -183,7 +189,7 @@ class ArticleMgm:
                     current_affiliation.append(aff.strip())
         return affiliations
 
-    def process_paper(self, num_paper, paper, user):
+    def process_pubmed_paper(self, num_paper, paper, user):
         created_objs = {}
         paper_meta_data = paper['MedlineCitation']['Article']
         logger.info(f"[{num_paper}] Processing paper {paper_meta_data['ArticleTitle']}")
@@ -203,7 +209,8 @@ class ArticleMgm:
                     ###
                     # 1) Create/Retrieve paper's venue
                     ###
-                    venue_obj, created = self.create_update_venue(paper_meta_data, venue_meta_data, user)
+                    venue_dict = self.__prepare_venue_dict_from_pubmed(paper_meta_data, venue_meta_data, user)
+                    venue_obj, created = self.create_update_venue(venue_dict)
                     if created:
                         created_objs['Venue'] = venue_obj
                     ###
@@ -221,7 +228,8 @@ class ArticleMgm:
                     ###
                     # 3) Create/Retrieve paper
                     ###
-                    article_obj, created = self.create_update_article(paper, venue_obj, pubmed_id_obj, user)
+                    paper_dict = self.__prepare_paper_dict_from_pubmed(paper, venue_obj, pubmed_id_obj, user)
+                    article_obj, created = self.create_update_article(paper_dict)
                     if created:
                         created_objs['Article'] = article_obj
                     ###
@@ -337,3 +345,107 @@ class ArticleMgm:
                 logger.error(e)
                 return None, None
 
+    def __find_author_position_scopus_list(self, authors_str, author_target):
+        author_position = None
+        for index, author in enumerate(authors_str.split(',')):
+            last_name = author.split()[0]
+            if last_name.strip().lower() == author_target.strip().lower():
+                author_position = index
+                break
+        return author_position
+
+    def process_scopus_paper(self, num_paper, paper_meta_data, author_obj, user):
+        created_objs = {}
+        logger.info(f"[{num_paper}] Processing paper {paper_meta_data['Title']}")
+        paper_doi = paper_meta_data['DOI']
+        paper_pubmed_id = paper_meta_data['PubMed ID']
+        try:
+            if paper_doi:
+                article_obj = Article.objects.get(doi=paper_doi)
+            else:
+                article_obj = Article.objects.get(repo_id__value=paper_pubmed_id)
+            logger.info(f"Paper already in the database!")
+            return article_obj, None
+        except Article.DoesNotExist:
+            try:
+                with transaction.atomic():
+                    venue_dict = {
+                        'name': paper_meta_data['Source title'],
+                        'created_by': user,
+                        'volume': paper_meta_data['Volume'],
+                        'issue': paper_meta_data['Issue'],
+                        'year': paper_meta_data['Year'],
+                        'issn': paper_meta_data['ISSN'],
+                    }
+                    if paper_meta_data['Document Type'] == 'Article':
+                        venue_dict['type'] = 'journal'
+                    elif paper_meta_data['Document Type'] == 'Conference Paper':
+                        venue_dict['type'] = 'proceeding'
+                    else:
+                        venue_dict['type'] = 'other'
+                    ###
+                    # 1) Create/Retrieve paper's venue
+                    ###
+                    venue_obj, created = self.create_update_venue(venue_dict)
+                    if created:
+                        created_objs['Venue'] = venue_obj
+                    ###
+                    # 2) Create/Retrieve pubmed id
+                    ###
+                    id_dict = {
+                        'name': 'Scopus Id',
+                        'value': paper_meta_data['EID'],
+                        'type': 'str',
+                        'created_by': user
+                    }
+                    scopus_id_obj, created = CustomField.objects.get_or_create(**id_dict)
+                    if created:
+                        created_objs['CustomField'] = scopus_id_obj
+                    ###
+                    # 3) Create/Retrieve paper
+                    ###
+                    funding_details = ''
+                    if paper_meta_data['Funding Text 1']:
+                        funding_details += paper_meta_data['Funding Text 1']
+                    if paper_meta_data['Funding Text 2']:
+                        funding_details += '\n' + paper_meta_data['Funding Text 2']
+                    if paper_meta_data['Funding Text 3']:
+                        funding_details += '\n' + paper_meta_data['Funding Text 3']
+                    keywords = ''
+                    if paper_meta_data['Author Keywords']:
+                        keywords += paper_meta_data['Author Keywords']
+                    if paper_meta_data['Index Keywords']:
+                        keywords += '; ' + paper_meta_data['Index Keywords']
+                    paper_dict = {
+                        'title': curate_text(paper_meta_data['Title']),
+                        'doi': paper_meta_data['DOI'],
+                        'academic_db': 'scopus',
+                        'venue': venue_obj,
+                        'repo_id': scopus_id_obj,
+                        'created_by': user,
+                        'language': paper_meta_data['Language of Original Document'],
+                        'year': paper_meta_data['Year'],
+                        'keywords': keywords,
+                        'funding_details': funding_details
+                    }
+                    article_obj, created = self.create_update_article(paper_dict)
+                    if created:
+                        created_objs['Article'] = article_obj
+                    ###
+                    # 5) Create/Retrieve article's authorship
+                    ###
+                    total_authors = len([author_id for author_id in paper_meta_data['Author(s) ID'].split(';') if author_id])
+                    author_position = self.__find_author_position_scopus_list(paper_meta_data['Authors'],
+                                                                              author_obj.last_name)
+                    if not author_position:
+                        raise Exception(f"Could not find the position of the author {author_obj.last_name} in the string "
+                                        f"{paper_meta_data['Authors']}")
+                    authorship_obj, created = self.create_update_authorship(author_obj, author_position, total_authors,
+                                                                            article_obj, user)
+                    if created:
+                        created_objs['Authorship'].append(authorship_obj)
+                    return article_obj, created_objs
+            except (IntegrityError, KeyError) as e:
+                # Transaction failed, log the error and continue with the paper
+                logger.error(e)
+                return None, None
