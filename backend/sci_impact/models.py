@@ -273,10 +273,11 @@ class Scientist(Person):
 class Article(Artifact):
     doi = models.CharField(max_length=300, null=True, blank=True)
     pages = models.CharField(max_length=50, null=True, blank=True)
-    keywords = models.CharField(max_length=300, null=True, blank=True)
+    keywords = models.TextField(null=True, blank=True)
     venue = models.ForeignKey(Venue, on_delete=models.CASCADE)
     academic_db = models.CharField(max_length=100, choices=ACADEMIC_REPO, default='other')
     funding_details = models.TextField(null=True, blank=True)
+    cited_by = models.IntegerField(default=0)
     # publication id on academic repositories
     repo_id = models.ForeignKey(CustomField, on_delete=models.CASCADE)
     # other fields
