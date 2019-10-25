@@ -1,5 +1,6 @@
 from django.db import IntegrityError, transaction
-from sci_impact.models import Affiliation, Article, Authorship, Country, CustomField, Institution, Scientist, Venue
+from sci_impact.models import Affiliation, Article, Authorship, Country, CustomField, Institution, Scientist, Venue, \
+    Artifact, ArtifactCitation
 from data_collector.utils import get_gender, curate_text
 from datetime import date
 
@@ -347,12 +348,39 @@ class ArticleMgm:
 
     def __find_author_position_scopus_list(self, authors_str, author_target):
         author_position = None
-        for index, author in enumerate(authors_str.split(',')):
+        authors = authors_str.split(',')
+        for index, author in enumerate(authors):
             last_name = author.split()[0]
             if last_name.strip().lower() == author_target.strip().lower():
                 author_position = index
                 break
+
         return author_position
+
+    # ex. Palles, C., Cazier, J.B., Howarth, K.M., Germline mutations affecting the proofreading domains of POLE and
+    # POLD1 predispose to colorectal adenomas and carcinomas (2013) Nat Genet, 45, pp. 136-144;
+    def __process_references(self, current_article_obj, article_author_obj, references_str):
+        references = references_str.split(';')
+        for reference in references:
+            ref_parts = reference.split('(')
+            authors_title = ref_parts[0].split(',')
+            year = ref_parts[1].split(')')[0]
+            title = authors_title[len(authors_title)-1].strip()
+            authors = authors_title[:len(authors_title)-1]
+            self_citation = False
+            for author in authors:
+                if author.strip().lower() == article_author_obj.last_name.lower():
+                    self_citation = True
+                    break
+            try:
+                to_art = Artifact.objects.get(title__iexact=title, year=year)
+                citation_obj = ArtifactCitation(from_artifact=current_article_obj,
+                                                to_artifact=to_art,
+                                                self_citation=self_citation)
+                citation_obj.save()
+                logger.info(f"Created reference:\nFrom:{current_article_obj}\nTo:{to_art}\nSelf-citation:{self_citation}")
+            except Article.DoesNotExist:
+                logger.warning(f"Could not find the referece {title} in the database. Citation will no be created.")
 
     def process_scopus_paper(self, num_paper, paper_meta_data, author_obj, user):
         created_objs = {}
@@ -389,6 +417,7 @@ class ArticleMgm:
                     venue_obj, created = self.create_update_venue(venue_dict)
                     if created:
                         created_objs['Venue'] = venue_obj
+                        logger.info(f"Venue: {venue_obj} created!")
                     ###
                     # 2) Create/Retrieve pubmed id
                     ###
@@ -408,14 +437,20 @@ class ArticleMgm:
                     if paper_meta_data['Funding Text 1']:
                         funding_details += paper_meta_data['Funding Text 1']
                     if paper_meta_data['Funding Text 2']:
-                        funding_details += '\n' + paper_meta_data['Funding Text 2']
+                        if funding_details:
+                            funding_details += '\n'
+                        funding_details += paper_meta_data['Funding Text 2']
                     if paper_meta_data['Funding Text 3']:
-                        funding_details += '\n' + paper_meta_data['Funding Text 3']
+                        if funding_details:
+                            funding_details += '\n'
+                        funding_details += paper_meta_data['Funding Text 3']
                     keywords = ''
                     if paper_meta_data['Author Keywords']:
                         keywords += paper_meta_data['Author Keywords']
                     if paper_meta_data['Index Keywords']:
-                        keywords += '; ' + paper_meta_data['Index Keywords']
+                        if keywords:
+                            keywords += '; '
+                        keywords += paper_meta_data['Index Keywords']
                     paper_dict = {
                         'title': curate_text(paper_meta_data['Title']),
                         'doi': paper_meta_data['DOI'],
@@ -426,13 +461,17 @@ class ArticleMgm:
                         'language': paper_meta_data['Language of Original Document'],
                         'year': paper_meta_data['Year'],
                         'keywords': keywords,
-                        'funding_details': funding_details
+                        'funding_details': funding_details,
+                        'inb_pi_as_author': author_obj.is_pi_inb,
                     }
+                    if paper_meta_data['Cited by']:
+                        paper_dict['cited_by'] = paper_meta_data['Cited by']
                     article_obj, created = self.create_update_article(paper_dict)
                     if created:
                         created_objs['Article'] = article_obj
+                        logger.info('Paper created!')
                     ###
-                    # 5) Create/Retrieve article's authorship
+                    # 4) Create/Retrieve article's authorship
                     ###
                     total_authors = len([author_id for author_id in paper_meta_data['Author(s) ID'].split(';') if author_id])
                     author_position = self.__find_author_position_scopus_list(paper_meta_data['Authors'],
@@ -443,9 +482,18 @@ class ArticleMgm:
                     authorship_obj, created = self.create_update_authorship(author_obj, author_position, total_authors,
                                                                             article_obj, user)
                     if created:
-                        created_objs['Authorship'].append(authorship_obj)
+                        created_objs['Authorship'] = authorship_obj
+                        logger.info(f"Authorship: {authorship_obj} created!")
                     return article_obj, created_objs
             except (IntegrityError, KeyError) as e:
                 # Transaction failed, log the error and continue with the paper
                 logger.error(e)
                 return None, None
+
+
+
+# From the references provided by Scopus we only obtain limited information about the cites so we cannot create
+# venues records from these data. Instead of creating citations and references for each article
+# imported from Scopus and then compute citations we will directly save the number of citations provided by Scopus.
+# Later, we need to update cited_by metric of the papers, which information was obtained from PubMed
+# After that we need to change the impact calculation to directly use the cited_by metric

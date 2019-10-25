@@ -1,11 +1,14 @@
 from celery.utils.log import get_task_logger
 from celery import shared_task
+from collections import defaultdict
 from data_collector.pubmed import EntrezClient
 from datetime import date
 from django.contrib.auth.models import User
 from sci_impact.article import ArticleMgm
 from sci_impact.models import ArtifactCitation, Affiliation, Article, Authorship, Scientist
 
+import csv
+import pathlib
 
 logger = get_task_logger(__name__)
 
@@ -274,3 +277,36 @@ def fix_incorrect_citation(citation_ids):
                 citation_obj.delete()
             fixed_citations += 1
     logger.info(f"The process has finished, {fixed_citations} citations were fixed")
+
+
+@shared_task()
+def import_scopus_data(scientist_objs, user):
+    objs_created = defaultdict(list)
+    am = ArticleMgm()
+    scopus_data_dir = pathlib.Path('sci_impact', 'data', 'scopus')
+    for scientist_obj in scientist_objs:
+        scientist_name = scientist_obj.first_name[0].lower() + scientist_obj.last_name.lower()
+        file_name = scientist_name + '.csv'
+        logger.info(f"Processing: {file_name}")
+        scopus_file_name = scopus_data_dir.joinpath(file_name)
+        try:
+            with open(str(scopus_file_name), 'r', encoding='utf-8-sig') as f:
+                file = csv.DictReader(f, delimiter=',')
+                paper_index = 0
+                for paper_line in file:
+                    article_obj, created_objs = am.process_scopus_paper(paper_index, paper_line, scientist_obj, user)
+                    if created_objs:
+                        for type_obj, objs in created_objs.items():
+                            if isinstance(objs, list):
+                                objs_created[type_obj].extend(article_obj)
+                            else:
+                                objs_created[type_obj].append(article_obj)
+            if objs_created:
+                msg = 'The action was completed successfully!\n'
+                for model, objs in objs_created.items():
+                    msg += f"- It was created {len(objs)} objects of the type {model}\n"
+                logger.info(msg)
+            else:
+                logger.warning('No objects were created')
+        except Exception as e:
+            logger.error(e)

@@ -10,11 +10,13 @@ from sci_impact.models import Scientist, Country, Institution, Affiliation, Arti
                               Network, NetworkNode, NetworkEdge, ArtifactCitation, Impact, ImpactDetail, \
                               FieldCitations, Artifact
 from sci_impact.tasks import get_citations, mark_articles_of_inb_pis, fill_affiliation_join_date, get_references, \
-                             compute_h_index, update_productivy_metrics, identify_self_citation, fix_incorrect_citation
+                             compute_h_index, update_productivy_metrics, identify_self_citation, fix_incorrect_citation, \
+                             import_scopus_data
 from similarity.jarowinkler import JaroWinkler
 from data_collector.utils import normalize_transform_text
 
 import csv
+import ctypes
 import logging
 import pathlib
 import requests
@@ -22,7 +24,7 @@ import re
 
 logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
-
+csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
 class ExportCsvMixin:
     def export_as_csv(self, request, queryset):
@@ -38,6 +40,12 @@ class ExportCsvMixin:
             row = writer.writerow([getattr(obj, field) for field in field_names])
         return response
     export_as_csv.short_description = "Export selected as CSV"
+
+
+@admin.register(CustomField)
+class CustomFieldAdmin(admin.ModelAdmin):
+    list_display = ('name', 'value', 'type')
+    search_fields = ('name',)
 
 
 @admin.register(Country)
@@ -82,7 +90,7 @@ class CountryAdmin(admin.ModelAdmin):
                                              created_by=request.user)
     load_countries.short_description = 'Load list of countries'
 
-# still  missing!
+
 @admin.register(Scientist)
 class ScientistAdmin(admin.ModelAdmin):
     list_display = ('last_name', 'first_name', 'gender', 'is_pi_inb', 'affiliations', 'articles',
@@ -91,8 +99,8 @@ class ScientistAdmin(admin.ModelAdmin):
     ordering = ('last_name', 'articles', 'articles_as_first_author', 'articles_as_last_author')
     search_fields = ('first_name', 'last_name',)
     actions = ['compute_h_index','export_as_csv', 'compute_coauthors_network', 'get_articles_pubmed',
-               'identify_possible_duplicates', 'mark_as_duplicate', 'remove_duplicates', 'obtain_pi_collaborator',
-               'mark_as_not_duplicate', 'udpate_productivity_metrics']
+               'identify_possible_duplicates', 'import_scopus_data', 'mark_as_duplicate', 'remove_duplicates',
+               'obtain_pi_collaborator', 'mark_as_not_duplicate', 'udpate_productivity_metrics']
     list_filter = ('is_pi_inb', 'gender',)
     # to increase the loading time of the change view
     raw_id_fields = ['scientist_ids', 'most_recent_pi_inb_collaborator']
@@ -173,27 +181,28 @@ class ScientistAdmin(admin.ModelAdmin):
 
     def import_scopus_data(self, request, queryset):
         am = ArticleMgm()
-        scopus_data_dir = pathlib.Path('..', 'scopus_data')
+        scopus_data_dir = pathlib.Path('sci_impact', 'data', 'scopus')
         for scientist_obj in queryset:
             scientist_name = scientist_obj.first_name[0].lower() + scientist_obj.last_name.lower()
             file_name = scientist_name + '.csv'
-            logging.info(f"\nProcessing: {file_name}")
+            logger.info(f"Processing: {file_name}")
             scopus_file_name = scopus_data_dir.joinpath(file_name)
             try:
-                with open(str(scopus_file_name), 'r', encoding='utf-8') as f:
+                with open(str(scopus_file_name), 'r', encoding='utf-8-sig') as f:
                     file = csv.DictReader(f, delimiter=',')
                     paper_index = 0
                     for paper_line in file:
                         article_obj, created_objs = am.process_scopus_paper(paper_index, paper_line, scientist_obj,
                                                                             request.user)
-                        for type_obj, objs in created_objs.items():
-                            if isinstance(objs, list):
-                                self.objs_created[type_obj].extend(article_obj)
-                            else:
-                                self.objs_created[type_obj].append(article_obj)
+                        if created_objs:
+                            for type_obj, objs in created_objs.items():
+                                if isinstance(objs, list):
+                                    self.objs_created[type_obj].extend(article_obj)
+                                else:
+                                    self.objs_created[type_obj].append(article_obj)
                     self.__display_feedback_msg(request)
             except Exception as e:
-                self.message_user(request, str(e), level=messages.error)
+                self.message_user(request, str(e), level=messages.ERROR)
     import_scopus_data.short_description = 'Import articles from Scopus files'
 
     def remove_duplicates(self, request, queryset):
@@ -739,7 +748,6 @@ class ArticleAdmin(admin.ModelAdmin):
         article_ids = []
         for article in queryset:
             article_ids.append(article.id)
-        context = {'article_ids': article_ids, 'user_id': request.user.id}
         get_citations.delay(article_ids)
         msg = f"The process of collecting citations has started, please refer to the log to get updates about it"
         self.message_user(request, msg, level=messages.SUCCESS)
