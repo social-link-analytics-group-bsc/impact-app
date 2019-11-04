@@ -917,6 +917,7 @@ class ImpactAdmin(admin.ModelAdmin):
         for obj in queryset:
             total_publications, total_weighted_impact = 0, 0
             arr_impact_details = []
+            # Compute metrics by year year
             for year in range(obj.start_year, obj.end_year + 1):
                 field_citations_year_obj = FieldCitations.objects.get(year=year)
                 field_citations = field_citations_year_obj.avg_citations_field
@@ -931,9 +932,12 @@ class ImpactAdmin(admin.ModelAdmin):
                 num_not_cited_publications = 0
                 num_self_citations = 0
                 for publication in publications_year:
-                    citations = ArtifactCitation.objects.filter(to_artifact=publication)
-                    if len(citations) > 0:
-                        num_citations += len(citations)
+                    # if publication is artifact, get article
+                    if isinstance(publication, Artifact):
+                        publication = publication.article
+                    if publication.cited_by > 0:
+                        num_citations += publication.cited_by
+                        citations = ArtifactCitation.objects.filter(to_artifact=publication)
                         for citation in citations:
                             if citation.self_citation:
                                 num_self_citations += 1
@@ -954,6 +958,7 @@ class ImpactAdmin(admin.ModelAdmin):
                     'impact_field': impact_field
                 }
                 arr_impact_details.append(impact_details_dict)
+            # Prepare report
             for impact_details in arr_impact_details:
                 prop_py = impact_details['publications'] / total_publications if total_publications else 0
                 impact_details['prop_publications_year'] = prop_py
@@ -1000,7 +1005,7 @@ class ImpactDetailAdmin(admin.ModelAdmin):
     list_display = ('impact_header', 'year', 'publications', 'citations', 'citations_per_publication',
                     'not_cited_publications', 'self_citations', 'citations_field', 'impact',
                     'publications_year', 'w_impact_field')
-    ordering = ('year',)
+    ordering = ('impact_header', 'year',)
     search_fields = ('impact_header__name', )
 
     def save_model(self, request, obj, form, change):
