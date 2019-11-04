@@ -313,3 +313,16 @@ def import_scopus_data(context):
                 logger.warning('No objects were created')
         except Exception as e:
             logger.error(e)
+
+
+@shared_task()
+def update_citations(article_ids):
+    for article_id in article_ids:
+        article = Article.objects.get(id=article_id)
+        if article.cited_by == 0:
+            logger.info(f"Updating the citations of paper {article.title}")
+            citations = ArtifactCitation.objects.filter(to_artifact=article)
+            num_citations = len(citations)
+            article.cited_by = num_citations
+            article.save()
+    logger.info('Task has finished!')
