@@ -168,7 +168,10 @@ DATABASES = {
 
 11. Run `python manage.py createsuperuser` to create an admin user
 
-12. Run the Django server by running the following command `python manage.py runserver locahost:8000`
+12. Run the Django server `python manage.py runserver locahost:8000`
+
+13. Get into the backend directory and run `celery worker -A backend --loglevel=info`. Celery is used to execute 
+long-running tasks in background
 
 ## Technologies
 
@@ -176,6 +179,7 @@ DATABASES = {
 2. [PostgreSQL](https://www.postgresql.org/)
 3. [Django 2.2](https://www.djangoproject.com)
 4. [Biopython](https://biopython.org/)
+5. [Celery](http://www.celeryproject.org/)
 
 ## Issues
 
@@ -184,4 +188,4 @@ suggestions.
 
 ## Contributors
 
-[Jorge Saldivar](https://github.com/joausaga), María José Rementería, and Salvador Capella
+[Jorge Saldivar](https://github.com/joausaga), María José Rementería, Nataly Buslón, and Salvador Capella
