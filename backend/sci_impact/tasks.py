@@ -231,6 +231,7 @@ def update_productivy_metrics(scientist_ids):
         scientist_obj.article_citations = scientist_production['article_citations']
         scientist_obj.articles_with_citations = scientist_production['articles_with_citations']
         scientist_obj.save()
+    logger.info('Task finished!')
 
 
 @shared_task
@@ -280,11 +281,13 @@ def fix_incorrect_citation(citation_ids):
 
 
 @shared_task()
-def import_scopus_data(scientist_objs, user):
+def import_scopus_data(context):
     objs_created = defaultdict(list)
     am = ArticleMgm()
     scopus_data_dir = pathlib.Path('sci_impact', 'data', 'scopus')
-    for scientist_obj in scientist_objs:
+    user = User.objects.get(username=context['username'])
+    for scientist_id in context['scientist_ids']:
+        scientist_obj = Scientist.objects.get(id=scientist_id)
         scientist_name = scientist_obj.first_name[0].lower() + scientist_obj.last_name.lower()
         file_name = scientist_name + '.csv'
         logger.info(f"Processing: {file_name}")

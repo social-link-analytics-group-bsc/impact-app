@@ -354,7 +354,6 @@ class ArticleMgm:
             if last_name.strip().lower() == author_target.strip().lower():
                 author_position = index
                 break
-
         return author_position
 
     # ex. Palles, C., Cazier, J.B., Howarth, K.M., Germline mutations affecting the proofreading domains of POLE and
@@ -392,7 +391,12 @@ class ArticleMgm:
                 article_obj = Article.objects.get(doi=paper_doi)
             else:
                 article_obj = Article.objects.get(repo_id__value=paper_pubmed_id)
-            logger.info(f"Paper already in the database!")
+            logger.info('Paper already in the database!')
+            # update citation
+            if paper_meta_data['Cited by']:
+                logger.info('Updating paper citations')
+                article_obj.cited_by = paper_meta_data['Cited by']
+                article_obj.save()
             return article_obj, None
         except Article.DoesNotExist:
             try:
@@ -434,20 +438,20 @@ class ArticleMgm:
                     # 3) Create/Retrieve paper
                     ###
                     funding_details = ''
-                    if paper_meta_data['Funding Text 1']:
+                    if paper_meta_data.get('Funding Text 1'):
                         funding_details += paper_meta_data['Funding Text 1']
-                    if paper_meta_data['Funding Text 2']:
+                    if paper_meta_data.get('Funding Text 2'):
                         if funding_details:
                             funding_details += '\n'
                         funding_details += paper_meta_data['Funding Text 2']
-                    if paper_meta_data['Funding Text 3']:
+                    if paper_meta_data.get('Funding Text 3'):
                         if funding_details:
                             funding_details += '\n'
                         funding_details += paper_meta_data['Funding Text 3']
                     keywords = ''
-                    if paper_meta_data['Author Keywords']:
+                    if paper_meta_data.get('Author Keywords'):
                         keywords += paper_meta_data['Author Keywords']
-                    if paper_meta_data['Index Keywords']:
+                    if paper_meta_data.get('Index Keywords'):
                         if keywords:
                             keywords += '; '
                         keywords += paper_meta_data['Index Keywords']
@@ -476,9 +480,19 @@ class ArticleMgm:
                     total_authors = len([author_id for author_id in paper_meta_data['Author(s) ID'].split(';') if author_id])
                     author_position = self.__find_author_position_scopus_list(paper_meta_data['Authors'],
                                                                               author_obj.last_name)
-                    if not author_position:
-                        raise Exception(f"Could not find the position of the author {author_obj.last_name} in the string "
-                                        f"{paper_meta_data['Authors']}")
+                    # if we cannot find the position of the author, let's try with his/her alternative names
+                    if author_position is None and author_obj.alternative_names:
+                            alternative_names = author_obj.alternative_names.split()
+                            for alternative_name in alternative_names:
+                                if len(alternative_name) > 1:
+                                    lastnames = alternative_name.split()
+                                    author_position = self.__find_author_position_scopus_list(paper_meta_data['Authors'],
+                                                                                              lastnames[len(lastnames)-1])
+                            if author_position is None:
+                                logger.warning(
+                                    f"Could not find the position of the author {author_obj.last_name} in the string "
+                                    f"{paper_meta_data['Authors']}. Last position will be assumed")
+                                author_position = (total_authors - 1)
                     authorship_obj, created = self.create_update_authorship(author_obj, author_position, total_authors,
                                                                             article_obj, user)
                     if created:
@@ -495,5 +509,6 @@ class ArticleMgm:
 # From the references provided by Scopus we only obtain limited information about the cites so we cannot create
 # venues records from these data. Instead of creating citations and references for each article
 # imported from Scopus and then compute citations we will directly save the number of citations provided by Scopus.
-# Later, we need to update cited_by metric of the papers, which information was obtained from PubMed
+# Later, we need to complete the cited_by metric of the papers obtained from PubMed. For that a new function will need
+# to be implemented
 # After that we need to change the impact calculation to directly use the cited_by metric

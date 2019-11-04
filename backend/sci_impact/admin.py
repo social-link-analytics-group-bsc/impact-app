@@ -180,29 +180,16 @@ class ScientistAdmin(admin.ModelAdmin):
     get_articles_pubmed.short_description = 'Get articles from PubMed'
 
     def import_scopus_data(self, request, queryset):
-        am = ArticleMgm()
-        scopus_data_dir = pathlib.Path('sci_impact', 'data', 'scopus')
+        scientist_ids = []
         for scientist_obj in queryset:
-            scientist_name = scientist_obj.first_name[0].lower() + scientist_obj.last_name.lower()
-            file_name = scientist_name + '.csv'
-            logger.info(f"Processing: {file_name}")
-            scopus_file_name = scopus_data_dir.joinpath(file_name)
-            try:
-                with open(str(scopus_file_name), 'r', encoding='utf-8-sig') as f:
-                    file = csv.DictReader(f, delimiter=',')
-                    paper_index = 0
-                    for paper_line in file:
-                        article_obj, created_objs = am.process_scopus_paper(paper_index, paper_line, scientist_obj,
-                                                                            request.user)
-                        if created_objs:
-                            for type_obj, objs in created_objs.items():
-                                if isinstance(objs, list):
-                                    self.objs_created[type_obj].extend(article_obj)
-                                else:
-                                    self.objs_created[type_obj].append(article_obj)
-                    self.__display_feedback_msg(request)
-            except Exception as e:
-                self.message_user(request, str(e), level=messages.ERROR)
+            scientist_ids.append(scientist_obj.id)
+        context = {
+            'scientist_ids': scientist_ids,
+            'username': request.user.username
+        }
+        import_scopus_data.delay(context)
+        msg = f"Data is being imported, please check the log to follow updates on the process"
+        self.message_user(request, msg, level=messages.SUCCESS)
     import_scopus_data.short_description = 'Import articles from Scopus files'
 
     def remove_duplicates(self, request, queryset):
