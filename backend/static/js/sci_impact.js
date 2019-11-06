@@ -30,7 +30,7 @@ function loadSummaryCards(server_subfolder) {
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -55,7 +55,7 @@ function drawArticlesByYearChart(server_subfolder){
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -80,7 +80,7 @@ function drawCitationsByYearChart(server_subfolder){
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -101,7 +101,7 @@ function loadSciImpactSummaryCards(impact_obj, server_subfolder) {
                 sy_elements[i].textContent = data.sci_impact_year_range[0];
                 ey_elements[i].textContent = data.sci_impact_year_range[1];
             }
-            document.getElementById("dh-title").innerHTML = data.impact_obj_name;
+            document.getElementById("dh-title").innerHTML += ' ' + data.impact_obj_name;
             document.getElementById("total_articles").innerHTML = data.sci_impact_total_articles;
             document.getElementById("articles_source").textContent = data.articles_source;
             document.getElementById("total_citations").innerHTML = data.sci_impact_total_citations;
@@ -111,7 +111,7 @@ function loadSciImpactSummaryCards(impact_obj, server_subfolder) {
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -150,7 +150,7 @@ function createSciImpactTable(impact_obj, server_subfolder) {
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     });
 }
@@ -195,7 +195,7 @@ function drawAvgCitationsByYearChart(impact_obj, server_subfolder){
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -228,7 +228,7 @@ function drawAvgCitationsByYearPIsChart(server_subfolder){
         },
         error: function(error_data){
             console.log("Error!");
-            console.log(error_data);
+            console.log(error_data.responseText);
         }
     })
 }
@@ -251,4 +251,32 @@ function createPIPapersTable(impact_obj, server_subfolder) {
         ]
     } );
 
+}
+
+
+function generateSciImpactMenu(server_subfolder, impactObjs) {
+    var researchersMenu = document.getElementById("researchers_menu");
+    var institutionMenu = document.getElementById("institution_menu");
+    var menuItem, menuSpan, menuI;
+    var base_url = getBaseURL(server_subfolder);
+    var url = base_url.concat("/", "dashboard/sci_impact/");
+    for (i=0; i < impactObjs.length; i++) {
+        menuItem = document.createElement("a");
+        menuItem.href = url.concat(impactObjs[i].type, '_', impactObjs[i].id);
+        if (impactObjs[i].type == 'scientist') {
+            menuItem.className = "collapse-item";
+            menuItem.innerHTML = impactObjs[i].name;
+            researchersMenu.appendChild(menuItem);
+        }
+        if (impactObjs[i].type == 'institution') {
+            menuItem.className = "nav-link";
+            menuI = document.createElement("i");
+            menuI.className = "fas fa-fw fa-university";
+            menuItem.appendChild(menuI);
+            menuSpan = document.createElement("span");
+            menuSpan.innerHTML = impactObjs[i].name;
+            menuItem.appendChild(menuSpan);
+            institutionMenu.appendChild(menuItem);
+        }
+    }
 }
