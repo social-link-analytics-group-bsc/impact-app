@@ -382,6 +382,7 @@ class Institution(models.Model):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     web_page = models.URLField(blank=True, null=True)
+    is_inb = models.BooleanField(default=False)
     # audit fields
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created = models.DateTimeField(editable=False, default=timezone.now)
@@ -551,6 +552,9 @@ class ImpactDetail(models.Model):
             self.created = timezone.now()
         self.modified = timezone.now()
         return super(ImpactDetail, self).save(*args, **kwargs)
+
+    class Meta:
+        unique_together = ('impact_header', 'year')
 
 
 class FieldCitations(models.Model):
