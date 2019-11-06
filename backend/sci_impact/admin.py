@@ -904,85 +904,83 @@ class NetworkAdmin(admin.ModelAdmin):
 @admin.register(Impact)
 class ImpactAdmin(admin.ModelAdmin):
     list_display = ('name', 'start_year', 'end_year', 'total_publications', 'total_w_impact')
-    actions = ['compute_sci_impact_inb', 'compute_sci_impact_scientist']
+    actions = ['compute_sci_impact']
     exclude = ['date', 'total_publications', 'total_weighted_impact']
     raw_id_fields = ['scientist', 'institution']  # to increase the loading time of the change view
     autocomplete_fields = ['scientist', 'institution']
+    search_fields = ('name',)
 
     def save_model(self, request, obj, form, change):
         obj.created_by = request.user
         super().save_model(request, obj, form, change)
 
-    def compute_sci_impact(self, queryset, user, computation_type='inb'):
-        for obj in queryset:
-            total_publications, total_weighted_impact = 0, 0
-            arr_impact_details = []
-            # Compute metrics by year year
-            for year in range(obj.start_year, obj.end_year + 1):
-                field_citations_year_obj = FieldCitations.objects.get(year=year)
-                field_citations = field_citations_year_obj.avg_citations_field
-                if computation_type == 'inb':
-                    publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
+    def do_compute_sci_impact(self, impact_obj, user, computation_type='inb'):
+        total_publications, total_weighted_impact = 0, 0
+        arr_impact_details = []
+        # Compute metrics by year year
+        for year in range(impact_obj.start_year, impact_obj.end_year + 1):
+            field_citations_year_obj = FieldCitations.objects.get(year=year)
+            field_citations = field_citations_year_obj.avg_citations_field
+            if computation_type == 'inb':
+                publications_year = Article.objects.filter(year=year, inb_pi_as_author=True)
+            else:
+                publications_year = Artifact.objects.filter(pk__in=Authorship.objects.filter(author=impact_obj.scientist).
+                                                            distinct('artifact').values('artifact'), year=year)
+            num_publications_year = len(publications_year)
+            total_publications += num_publications_year
+            num_citations = 0
+            num_not_cited_publications = 0
+            num_self_citations = 0
+            for publication in publications_year:
+                # if publication is artifact, get article
+                if isinstance(publication, Artifact):
+                    publication = publication.article
+                if publication.cited_by > 0:
+                    num_citations += publication.cited_by
+                    citations = ArtifactCitation.objects.filter(to_artifact=publication)
+                    for citation in citations:
+                        if citation.self_citation:
+                            num_self_citations += 1
                 else:
-                    publications_year = Artifact.objects.filter(pk__in=Authorship.objects.filter(author=obj.scientist).
-                                                                distinct('artifact').values('artifact'), year=year)
-                num_publications_year = len(publications_year)
-                total_publications += num_publications_year
-                num_citations = 0
-                num_not_cited_publications = 0
-                num_self_citations = 0
-                for publication in publications_year:
-                    # if publication is artifact, get article
-                    if isinstance(publication, Artifact):
-                        publication = publication.article
-                    if publication.cited_by > 0:
-                        num_citations += publication.cited_by
-                        citations = ArtifactCitation.objects.filter(to_artifact=publication)
-                        for citation in citations:
-                            if citation.self_citation:
-                                num_self_citations += 1
-                    else:
-                        num_not_cited_publications += 1
-                avg_cpp = num_citations / num_publications_year if num_publications_year > 0 else 0
-                prop_ncp = num_not_cited_publications / num_publications_year if num_publications_year > 0 else 0
-                prop_sc = num_self_citations / num_citations if num_citations > 0 else 0
-                impact_field = avg_cpp / field_citations if field_citations > 0 else 0
-                impact_details_dict = {
-                    'impact_header': obj,
-                    'year': year,
-                    'publications': num_publications_year,
-                    'citations': num_citations,
-                    'avg_citations_per_publication': avg_cpp,
-                    'prop_not_cited_publications': prop_ncp,
-                    'prop_self_citations': prop_sc,
-                    'impact_field': impact_field
-                }
-                arr_impact_details.append(impact_details_dict)
-            # Prepare report
-            for impact_details in arr_impact_details:
-                prop_py = impact_details['publications'] / total_publications if total_publications else 0
-                impact_details['prop_publications_year'] = prop_py
-                weighted_if = impact_details['impact_field'] * prop_py
-                impact_details['weighted_impact_field'] = weighted_if
-                total_weighted_impact += weighted_if
-                impact_details['created_by'] = user
-                id_obj = ImpactDetail(**impact_details)
-                id_obj.save()
-            obj.total_publications = total_publications
-            obj.total_weighted_impact = total_weighted_impact
-            obj.save()
+                    num_not_cited_publications += 1
+            avg_cpp = num_citations / num_publications_year if num_publications_year > 0 else 0
+            prop_ncp = num_not_cited_publications / num_publications_year if num_publications_year > 0 else 0
+            prop_sc = num_self_citations / num_citations if num_citations > 0 else 0
+            impact_field = avg_cpp / field_citations if field_citations > 0 else 0
+            impact_details_dict = {
+                'impact_header': impact_obj,
+                'year': year,
+                'publications': num_publications_year,
+                'citations': num_citations,
+                'avg_citations_per_publication': avg_cpp,
+                'prop_not_cited_publications': prop_ncp,
+                'prop_self_citations': prop_sc,
+                'impact_field': impact_field
+            }
+            arr_impact_details.append(impact_details_dict)
+        # Prepare report
+        for impact_details in arr_impact_details:
+            prop_py = impact_details['publications'] / total_publications if total_publications else 0
+            impact_details['prop_publications_year'] = prop_py
+            weighted_if = impact_details['impact_field'] * prop_py
+            impact_details['weighted_impact_field'] = weighted_if
+            total_weighted_impact += weighted_if
+            impact_details['created_by'] = user
+            id_obj = ImpactDetail(**impact_details)
+            id_obj.save()
+        impact_obj.total_publications = total_publications
+        impact_obj.total_weighted_impact = total_weighted_impact
+        impact_obj.save()
 
-    def compute_sci_impact_scientist(self, request, queryset):
-        self.compute_sci_impact(queryset, request.user, computation_type='scientist')
+    def compute_sci_impact(self, request, queryset):
+        for impact_obj in queryset:
+            if impact_obj.scientist_id is not None:
+                self.do_compute_sci_impact(impact_obj, request.user, computation_type='scientist')
+            else:
+                self.do_compute_sci_impact(impact_obj, request.user, computation_type='inb')
         msg = f"The computation of the scientific impact was computed successfully!"
         self.message_user(request, msg, level=messages.SUCCESS)
-    compute_sci_impact_scientist.short_description = 'Compute the Scientific Impact of a Scientist'
-
-    def compute_sci_impact_inb(self, request, queryset):
-        self.compute_sci_impact(queryset, request.user, computation_type='inb')
-        msg = f"The computation of the scientific impact was computed successfully!"
-        self.message_user(request, msg, level=messages.SUCCESS)
-    compute_sci_impact_inb.short_description = 'Compute the Scientific Impact of the INB'
+    compute_sci_impact.short_description = 'Compute scientific impact'
 
     def total_w_impact(self, obj):
         return round(obj.total_weighted_impact, 2)
