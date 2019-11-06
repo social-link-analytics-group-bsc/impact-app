@@ -20,11 +20,7 @@
     <!-- Heading -->
     <div class="sidebar-heading">Scientific Impact</div>
     <!-- Nav Item -->
-    <li class="nav-item">
-        <a class="nav-link" href="{% url 'sci_impact' %}">
-            <i class="fas fa-fw fa-university"></i>
-            <span>INB</span>
-        </a>
+    <li id="institution_menu" class="nav-item">
     </li>
     <!-- Nav Item -->
     <li class="nav-item">
@@ -34,17 +30,7 @@
             <span>Principal Investigators</span>
         </a>
         <div id="researchers" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-          <div class="bg-white py-2 collapse-inner rounded">
-              <a class="collapse-item" href="{% url 'sci_impact' 'carazo' %}">José M. Carazo</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'dopazo' %}">Joaquin Dopazo</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'gelpi' %}">Josep L. Gelpi</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'guigo' %}">Roderic Guigo</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'gut' %}">Ivo Gut</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'navarro' %}">Arcadi Navarro</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'orozco' %}">Modesto Orozco</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'sanz' %}">Ferran Sanz</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'trelles' %}">Oswaldo Trelles</a>
-              <a class="collapse-item" href="{% url 'sci_impact' 'valencia' %}">Alfonso Valencia</a>
+          <div id="researchers_menu" class="bg-white py-2 collapse-inner rounded">
           </div>
         </div>
     </li>
