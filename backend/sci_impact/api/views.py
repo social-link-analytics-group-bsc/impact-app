@@ -282,19 +282,17 @@ class ArticlesPI(APIView):
         impact_query, _ = get_impact_query(kwargs.get('impact_obj'), request.user)
         sci_impact_obj = Impact.objects.select_related().filter(**impact_query).latest('created')
         years_range = list(range(sci_impact_obj.start_year, sci_impact_obj.end_year+1))
-        pi_articles = Artifact.objects.filter(pk__in=Authorship.objects.filter(author__id=sci_impact_obj.scientist.id,
+        pi_artifacts = Artifact.objects.filter(pk__in=Authorship.objects.filter(author=sci_impact_obj.scientist,
                                                                                created_by=request.user).
                                               distinct('artifact').values('artifact'), year__in=years_range,
                                               created_by=request.user)
         table_rows = []
-        for article in pi_articles:
-            article_citations = ArtifactCitation.objects.filter(to_artifact=article).\
-                filter(from_artifact__year__in=years_range, created_by=request.user).count()
+        for artifact in pi_artifacts:
             table_rows.append(
                 {
-                    'year': article.year,
-                    'title': article.title,
-                    'citations': article_citations
+                    'year': artifact.year,
+                    'title': artifact.title,
+                    'citations': artifact.article.cited_by
                 }
             )
         response = {'body': table_rows}
