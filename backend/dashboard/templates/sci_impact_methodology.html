@@ -16,32 +16,166 @@
     <div class="row">
         <div class="col-xl-12 col-md-12 mb-4">
             <div class="card shadow mb-4">
-                <!-- Card Header - Dropdown -->
+                <!-- Card Header - Dropdown
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Data collection and cleaning</h6>
-                </div>
+                    <h6 class="m-0 font-weight-bold text-primary">Definition and indicators</h6>
+                </div> -->
                 <!-- Card Body -->
                 <div class="card-body">
-                    <img class="px-3 px-sm-4" src="{% static 'img/data_collection.svg' %}" alt="" height="132px">
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col-xl-12 col-md-12 mb-4">
-            <div class="card shadow mb-4">
-                <!-- Card Header - Dropdown -->
-                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                    <h6 class="m-0 font-weight-bold text-primary">Scientific impact calculation</h6>
-                </div>
-                <!-- Card Body -->
-                <div class="card-body">
-                    <img class="img px-3 px-sm-4" src="{% static 'img/sci_impact_methodology.svg' %}" alt="" height="361px">
-                    <hr>
-                    <p class="small">
-                        * The mean of citations by field and year can be obtained from:
-                        <a href="https://www.recursoscientificos.fecyt.es/servicios/indices-de-impacto">Impact Index</a>
-                    </p>
+                    By <b>scientific impact</b>, we understand the intellectual contribution to a person’s field of study within
+                    academia <a href="https://academic.oup.com/rev/article/23/1/21/2889056">[1]</a>. Within the various methods
+                    proposed in the literature to measure the scientific impact of research (e.g.,
+                    <a href="https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf">[2]</a>,
+                    <a href="https://academic.oup.com/rev/article/25/3/264/2364634">[3]</a>,
+                    <a href="https://link.springer.com/book/10.1007%2F1-4020-2755-9">[4]</a>),
+                    we decided to employ the method called *normalized impact of the scientific production*, which is the
+                    methodology employed by the government of Spain to understand the impact of publications authored by scholars
+                    working in the country's research institutions
+                    <a href="http://www.ciencia.gob.es/stfls/MICINN/Ayudas/PE_2017_2020/PE_Generacion_Conocimiento_Fortalecimiento_Cientifico_Tecnologico/Subprograma_Fortalecimiento_Institucional/FICHEROS/Centros_Excelencia_Severo_Ochoa_y_Unidades_Excelencia_Maria_Maeztu_2018/Calculo_IN_definitivo.pdf">[5]</a>.
+                    <!-- <img class="px-3 px-sm-4" src="{% static 'img/data_collection.svg' %}" alt="" height="132px">-->
+                    <br><br><h6><span><b>Indicators</b></span></h6>
+                    <table class="table table-responsive table-hover">
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Number of publications (NP)</td>
+                                <td>Number of papers published by the organization (or researcher).
+                                Papers are considered normal articles published in journals and in conference proceedings</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Number of citations (C)</td>
+                                <td>Total citations received by NP</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Mean of citations per paper (CPP)</td>
+                                <td>Average number of citations per publications</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>Percentage of not-cited papers (%ncP)</td>
+                                <td>Proportion of papers that did not receive citations</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>Percentage of self-citation (%sc)</td>
+                                <td>Proportion of citations in which the list of authors of the citing paper match the list of authors of the cited paper</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    To understand whether a certain number of citations or a specific value of citations per publication is low or high, we
+                    compare them against some reference value. The following indicators are the international reference values used
+                    to normalize the assessment of scientific impact.
+                    <br><br>
+                    <table class="table table-responsive table-hover">
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>6</td>
+                                <td>Mean of field citation score (FCS)</td>
+                                <td>Average of citations of all papers published in all journals of the field in which the institute has been active</td>
+                            </tr>
+                            <tr>
+                                <td>7</td>
+                                <td>CPP/FCS</td>
+                                <td>Whether or not the average citations per publications is above (or below) the international average in the field</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    The mean of citations by field and year can be obtained from the annual
+                    <a href="https://www.recursoscientificos.fecyt.es/servicios/indices-de-impacto">report</a> of Elsevier.
+                    <br><br>
+                    <h6><span><b>Impact Calculation</b></span></h6>
+                    <ol>
+                        <li>
+                            Select the range of years of evaluation. There should be at least four years between the
+                            current year and the final year of the evaluation period. The average "peak" in the number
+                            of citations happens in the third to a fourth-year after publication. A five-year period is
+                            then appropriate for impact evaluation <a href="https://bura.brunel.ac.uk/bitstream/2438/7048/4/Fulltext.pdf">[2]</a>;
+                        </li>
+                        <li>
+                            Compute the indicators for each year in the selected range;
+                        </li>
+                        <li>
+                            Evaluate how the institution (or researcher) performs within its field of activity.
+                        </li>
+                    </ol>
+                    <br>
+                    <h6><span><b>Ilustrative Example</b></span></h6>
+                    <table class="table table-responsive table-hover">
+                        <caption class="small">Scientific impact of the Institution X between years 2012 and 2015</caption>
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>Year</th>
+                                <th>NP</th>
+                                <th>C</th>
+                                <th>CPP</th>
+                                <th>%Pnc</th>
+                                <th>%sc</th>
+                                <th>FCS</th>
+                                <th>CPP/FCS*</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>2012</td>
+                                <td>70</td>
+                                <td>450</td>
+                                <td>6.2</td>
+                                <td>3</td>
+                                <td>7</td>
+                                <td>3.1</td>
+                                <td>2</td>
+                            </tr>
+                            <tr>
+                                <td>2013</td>
+                                <td>78</td>
+                                <td>370</td>
+                                <td>4.7</td>
+                                <td>5</td>
+                                <td>6</td>
+                                <td>3.6</td>
+                                <td>1.3</td>
+                            </tr>
+                            <tr>
+                                <td>2014</td>
+                                <td>81</td>
+                                <td>407</td>
+                                <td>5.0</td>
+                                <td>7</td>
+                                <td>8</td>
+                                <td>3.5</td>
+                                <td>1.4</td>
+                            </tr>
+                            <tr>
+                                <td>2015</td>
+                                <td>84</td>
+                                <td>463</td>
+                                <td>5.5</td>
+                                <td>4</td>
+                                <td>6</td>
+                                <td>3.8</td>
+                                <td>1.5</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    * Indicates whether the performance of the institution is far below (< 0.5), below (between 0.5 and 0.8),
+                    about (between 0.8 and 1.2), above (between 1.2 and 1.5) and far above (>1.5) the international
+                    impact of the field <a href="https://academic.oup.com/rev/article/25/3/264/236463">[3]</a>
                 </div>
             </div>
         </div>
