@@ -26,6 +26,7 @@ logging.getLogger('urllib3.connectionpool').setLevel(logging.ERROR)
 logger = logging.getLogger(__name__)
 csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
 
+
 class ExportCsvMixin:
     def export_as_csv(self, request, queryset):
         meta = self.model._meta
