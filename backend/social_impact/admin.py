@@ -1,16 +1,19 @@
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.auth.models import User
 from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import path
-from django.utils.text import Truncator
 from sci_impact.models import Country, Institution
-from social_impact.models import Project
+from social_impact.models import Project, Publication
+from shutil import copyfile
 
 import csv
 import datetime
 import logging
 import re
+import pathlib
+import os
 
 
 logger = logging.getLogger(__name__)
@@ -102,7 +105,7 @@ class ProjectAdmin(admin.ModelAdmin, ExportCsvMixin):
         for row in csv_reader:
             coordinator_country = self.__get_country(row['Country'])
             coordinator = self.__get_institution(row['Coordinated by'].title().strip(), coordinator_country, user)
-            project_dir = {
+            project_dict = {
                 'name': row['Acronymous'].strip(),
                 'description': row['European Projects'],
                 'start_date': datetime.datetime.strptime(row['Start'],'%d.%m.%Y'),
@@ -114,22 +117,22 @@ class ProjectAdmin(admin.ModelAdmin, ExportCsvMixin):
                 'created_by': user
             }
             if row['Twitter Handler']:
-                project_dir['twitter_account'] = row['Twitter Handler'].replace('@', '').strip()  # remove @
+                project_dict['twitter_account'] = row['Twitter Handler'].replace('@', '').strip()  # remove @
             if row['Status'].lower().strip() == 'active':
-                project_dir['status'] = 'active'
+                project_dict['status'] = 'active'
             elif row['Status'].lower().strip() == 'finished':
-                project_dir['status'] = 'finished'
+                project_dict['status'] = 'finished'
             else:
-                project_dir['status'] = 'other'
+                project_dict['status'] = 'other'
             if row['Twitter Hashtag']:
-                project_dir['twitter_hashtag'] = row['Twitter Handler'].replace('#', '').strip()  # remove #
+                project_dict['twitter_hashtag'] = row['Twitter Handler'].replace('#', '').strip()  # remove #
             if row['Overall budget']:
-                project_dir['overall_budget'] = self.__process_quantity(row['Overall budget'])
+                project_dict['overall_budget'] = self.__process_quantity(row['Overall budget'])
             if row['EU contribution']:
-                project_dir['budget_eu'] = self.__process_quantity(row['EU contribution'])
+                project_dict['budget_eu'] = self.__process_quantity(row['EU contribution'])
             obj, created = Project.objects.update_or_create(
-                name=project_dir['name'],
-                defaults=project_dir,
+                name=project_dict['name'],
+                defaults=project_dict,
             )
             if created:
                 obj_names['created'].append(obj.name)
@@ -170,3 +173,53 @@ class ProjectAdmin(admin.ModelAdmin, ExportCsvMixin):
         return render(
             request, 'admin/csv_form.html', payload
         )
+
+
+@admin.register(Publication)
+class PublicationAdmin(admin.ModelAdmin):
+    list_display = ('project', 'name', 'file')
+    search_fields = ('project__name', 'name')
+    change_list_template = 'admin/publication_changelist.html'
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path('bulk-import-publications/', self.bulk_load_publications),
+        ]
+        return my_urls + urls
+
+    def bulk_load_publications(self, request):
+        origin_dir = './social_impact/tmp'
+        doc_dir = './media/docs'
+        file_extension = 'pdf'
+        inb_user = User.objects.get(username='inb')
+        for root_name, dir_names, file_names in os.walk(origin_dir):
+            for file_name in file_names:
+                logger.info(f"Analyzing file: {file_name}")
+                # check if file_name is a pdf
+                if file_name.endswith(file_extension):
+                    # found a pdf
+                    file_path = pathlib.Path(root_name, file_name)
+                    # search project
+                    parent_dir = str(file_path.parent).split('/')[-1]
+                    try:
+                        project_obj = Project.objects.get(name__iexact=parent_dir)
+                        # copy file
+                        file_dir = str(pathlib.Path(doc_dir, project_obj.name + '__' + file_name))
+                        copyfile(str(file_path), file_dir)
+                        # set new dir
+                        publication_dict = {
+                            'name': file_name,
+                            'project': project_obj,
+                            'file':  file_dir,
+                            'created_by': inb_user
+                        }
+                        obj, created = Publication.objects.update_or_create(
+                            file=file_dir,
+                            defaults=publication_dict,
+                        )
+                        if created:
+                            logger.info(f"Publication {file_dir} created!")
+                    except Project.DoesNotExist as e:
+                        logger.info(f"Project {parent_dir} does not exists!")
+        return redirect('..')
