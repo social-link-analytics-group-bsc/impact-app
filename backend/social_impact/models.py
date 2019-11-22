@@ -56,19 +56,19 @@ class Project(models.Model):
 
 
 class Publication(models.Model):
-    title = models.CharField(max_length=300)
+    name = models.CharField(max_length=300)
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
-    file = models.FileField(upload_to='project_reports/', blank=True, null=True)
+    file = models.FileField(upload_to='docs/', blank=True, null=True, max_length=500)
     url = models.URLField(blank=True, null=True)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
-        return f"{self.title}"
+        return f"{self.name}"
 
     def __str__(self):
-        return self.title
+        return self.name
 
 
 class ImpactMention(models.Model):
