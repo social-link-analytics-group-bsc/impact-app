@@ -5,7 +5,9 @@ from django.http import HttpResponse
 from django.shortcuts import redirect, render
 from django.urls import path
 from sci_impact.models import Country, Institution
-from social_impact.models import Project, Publication
+from social_impact.models import Project, Publication, SocialImpactSearch, SocialImpactSearchPublication, \
+                                 ImpactMention, SIORMeasurement
+from social_impact.tasks import search_social_impact_mentions
 from shutil import copyfile
 
 import csv
@@ -48,6 +50,7 @@ class ProjectAdmin(admin.ModelAdmin, ExportCsvMixin):
     change_list_template = 'admin/project_changelist.html'
     list_filter = ('status',)
     ordering = ('name', 'status', 'start_date', 'end_date', 'overall_budget')
+    search_fields = ('name',)
 
     def pretty_coordinator(self, obj):
         return obj.coordinator
@@ -223,3 +226,99 @@ class PublicationAdmin(admin.ModelAdmin):
                     except Project.DoesNotExist as e:
                         logger.info(f"Project {parent_dir} does not exists!")
         return redirect('..')
+
+
+@admin.register(SocialImpactSearch)
+class SocialImpactSearchAdmin(admin.ModelAdmin):
+    list_display = ('name', 'dictionary', 'completed')
+    actions = ['execute_search']
+
+    def execute_search(self, request, queryset):
+        searches = []
+        payload = {'search_ids': [], 'current_user': request.user}
+        for search in queryset:
+            payload['search_ids'].append(search.id)
+        search_social_impact_mentions.delay(searches)
+        msg = f"The process of searching mentions of social impact has started. Depending on the number of publications " \
+              f"to be queried, it might take a while to complete. Please refer to the log to get updates " \
+              f"on the progress of the process."
+        self.message_user(request, msg, level=messages.SUCCESS)
+    execute_search.short_description = 'Execute Search'
+
+    def save_model(self, request, obj, form, change):
+        super(SocialImpactSearchAdmin, self).save_model(request, obj, form, change)
+        if change:
+            # remove all objects associated to this object
+            SocialImpactSearchPublication.objects.filter(social_impact_header=obj.id).delete()
+        publications = form.cleaned_data.get('publications')
+        for publication in publications:
+            record_dict = {
+                'social_impact_header': obj,
+                'publication': publication,
+                'created_by': request.user
+            }
+            sisp_obj = SocialImpactSearchPublication(**record_dict)
+            sisp_obj.save()
+
+    def delete_queryset(self, request, queryset):
+        for search in queryset:
+            SocialImpactSearchPublication.objects.filter(social_impact_header=search.id).delete()
+        queryset.delete()
+
+
+@admin.register(SocialImpactSearchPublication)
+class SocialImpactSearchPublicationAdmin(admin.ModelAdmin):
+    list_display = ('social_impact_header', 'publication', 'completed')
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(ImpactMention)
+class ImpactMentionAdmin(admin.ModelAdmin, ExportCsvMixin):
+    list_display = ('publication', 'page', 'sentence', 'impact_mention', 'mention_is_correct')
+    change_list_template = 'admin/impact_mention_changelist.html'
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def get_urls(self):
+        urls = super().get_urls()
+        my_urls = [
+            path('import-csv/', self.import_csv),
+        ]
+        return my_urls + urls
+
+    def __decode_utf8(self, input_iter):
+        for l in input_iter:
+            yield l.decode('utf-8')
+
+    def __process_csv(self, csv_reader, user):
+        for row in csv_reader:
+            publication = Publication.objects.get(project_id=row['project_id'], name=row['file'])
+            mention_dict = {
+                'publication': publication,
+                'page': row['page'],
+                'sentence': row['sentence'],
+                'impact_mention': row['impact mention'],
+                'created_by': user
+            }
+            impact_mention_obj = ImpactMention(**mention_dict)
+            impact_mention_obj.save()
+
+    def import_csv(self, request):
+        if request.method == 'POST':
+            csv_file = request.FILES['csv_file']
+            csv_reader = csv.DictReader(self.__decode_utf8(csv_file))
+            # Create Project objects from passed in data
+            self.__process_csv(csv_reader, request.user)
+            self.message_user(request, 'The process has successfully finished!', level=messages.SUCCESS)
+            return redirect('..')
+        form = CsvImportForm()
+        payload = {'form': form}
+        return render(
+            request, 'admin/csv_form.html', payload
+        )
