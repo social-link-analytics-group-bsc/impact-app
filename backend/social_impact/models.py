@@ -1,5 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.db.models.signals import pre_delete
+from django.dispatch.dispatcher import receiver
 from sci_impact.models import Country, Institution
 
 STATUSES = (
@@ -69,6 +71,55 @@ class Publication(models.Model):
 
     def __str__(self):
         return self.name
+
+
+@receiver(pre_delete, sender=Publication)
+def publication_delete(sender, instance, **kwargs):
+    # Pass false so FileField doesn't save the model.
+    instance.file.delete(False)
+
+
+class SocialImpactSearch(models.Model):
+    name = models.CharField(max_length=300)
+    publications = models.ManyToManyField(Publication)
+    dictionary = models.FileField(upload_to='dictionaries/', blank=True, null=True, max_length=500)
+    completed = models.BooleanField(default=False, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    def __unicode__(self):
+        return f"{self.name}"
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name_plural = "Social Impact Searches"
+
+
+@receiver(pre_delete, sender=SocialImpactSearch)
+def socialimpactsearch_delete(sender, instance, **kwargs):
+    # Pass false so FileField doesn't save the model.
+    instance.dictionary.delete(False)
+
+
+class SocialImpactSearchPublication(models.Model):
+    social_impact_header = models.ForeignKey(SocialImpactSearch, on_delete=models.CASCADE)
+    publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
+    completed = models.BooleanField(default=False, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
+
+    def __unicode__(self):
+        return f"{self.social_impact_header}, {self.publication}"
+
+    def __str__(self):
+        return f"{self.social_impact_header}, {self.publication}"
+
+    class Meta:
+        verbose_name_plural = "Social Impact Publications"
 
 
 class ImpactMention(models.Model):
