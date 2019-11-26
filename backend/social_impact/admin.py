@@ -269,6 +269,7 @@ class SocialImpactSearchAdmin(admin.ModelAdmin):
 @admin.register(SocialImpactSearchPublication)
 class SocialImpactSearchPublicationAdmin(admin.ModelAdmin):
     list_display = ('social_impact_header', 'publication', 'completed')
+    actions = ['mark_search_as_completed']
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -276,10 +277,16 @@ class SocialImpactSearchPublicationAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    def mark_search_as_completed(self, request, queryset):
+        for search_publication in queryset:
+            search_publication.completed = True
+            search_publication.save()
+    mark_search_as_completed.short_description = 'Mark search as completed'
+
 
 @admin.register(ImpactMention)
 class ImpactMentionAdmin(admin.ModelAdmin, ExportCsvMixin):
-    list_display = ('publication', 'page', 'sentence', 'impact_mention', 'mention_is_correct')
+    list_display = ('search', 'publication', 'page', 'sentence', 'impact_mention', 'mention_is_correct')
     change_list_template = 'admin/impact_mention_changelist.html'
 
     def has_add_permission(self, request, obj=None):
@@ -322,3 +329,53 @@ class ImpactMentionAdmin(admin.ModelAdmin, ExportCsvMixin):
         return render(
             request, 'admin/csv_form.html', payload
         )
+
+
+class CustomSIORModelForm(forms.ModelForm):
+    class Meta:
+        model = SIORMeasurement
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super(CustomSIORModelForm, self).__init__(*args, **kwargs)
+        impact_mentions = ImpactMention.objects.filter(mention_is_correct=True)
+        self.fields['evidence'].queryset = impact_mentions
+        project_ids = []
+        for impact_mention in impact_mentions:
+            project_ids.append(impact_mention.publication.project.id)
+        self.fields['project'].queryset = Project.objects.filter(pk__in=project_ids)
+
+
+@admin.register(SIORMeasurement)
+class SIORMeasurementAdmin(admin.ModelAdmin):
+    list_display = ('project', 'pretty_evidence', 'scientific_evidence', 'sdg', 'percentage_improvement',
+                    'description_improvement', 'sustainability', 'description_sustainability', 'replicability',
+                    'description_replicability', 'score')
+    form = CustomSIORModelForm
+
+    def pretty_evidence(self, obj):
+        return obj.evidence
+    pretty_evidence.short_description = 'Evidence'
+
+    def save_model(self, request, obj, form, change):
+        super(SIORMeasurementAdmin, self).save_model(request, obj, form, change)
+        if obj.sustainability and obj.replicability and obj.scientific_evidence:
+            if obj.percentage_improvement >= 30:
+                obj.score = 7
+            elif obj.percentage_improvement >= 20:
+                obj.score = 6
+            elif obj.percentage_improvement >= 10:
+                obj.score = 5
+            else:
+                obj.score = 4
+        else:
+            if (obj.sustainability and obj.replicability) or \
+               (obj.sustainability and obj.scientific_evidence) or \
+               (obj.replicability and obj.scientific_evidence):
+                obj.score = 3
+            else:
+                if obj.sustainability or obj.replicability or obj.scientific_evidence:
+                    obj.score = 2
+                else:
+                    obj.score = 1
+        obj.save()

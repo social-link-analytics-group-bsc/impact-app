@@ -11,23 +11,24 @@ STATUSES = (
 )
 
 SDGs = (
-    ('poverty', 'No poverty'),
-    ('hunger', 'Zero hunger'),
-    ('health', 'Good health and well-being'),
-    ('education', 'Quality education'),
-    ('gender', 'Gender equality'),
-    ('water', 'Clean water and sanitation'),
-    ('energy', 'Affordable and clean energy'),
-    ('work', 'Decent work and economic growth'),
-    ('industry', 'Industry, innovation, and infrastructure'),
-    ('inequalities', 'Reduced inequalities'),
-    ('sustainable', 'Sustainable cities and communities'),
-    ('consumption', 'Responsible consumption and production'),
-    ('climate', 'Climate action'),
-    ('life_water', 'Life below water'),
-    ('life_land', 'Life on land'),
-    ('peace', 'Peace, justice, and strong institutions'),
-    ('partnership', 'Partnership for the goals'),
+    ('poverty', 'SGD 1. No poverty'),
+    ('hunger', 'SGD 2. Zero hunger'),
+    ('health', 'SGD 3. Good health and well-being'),
+    ('education', 'SGD 4. Quality education'),
+    ('gender', 'SGD 5. Gender equality'),
+    ('water', 'SGD 6. Clean water and sanitation'),
+    ('energy', 'SGD 7. Affordable and clean energy'),
+    ('work', 'SGD 8. Decent work and economic growth'),
+    ('industry', 'SGD 9. Industry, innovation, and infrastructure'),
+    ('inequalities', 'SGD 10. Reduced inequalities'),
+    ('sustainable', 'SGD 11. Sustainable cities and communities'),
+    ('consumption', 'SGD 12. Responsible consumption and production'),
+    ('climate', 'SGD 13. Climate action'),
+    ('life_water', 'SGD 14. Life below water'),
+    ('life_land', 'SGD 15. Life on land'),
+    ('peace', 'SGD 16. Peace, justice, and strong institutions'),
+    ('partnership', 'SGD 17. Partnership for the goals'),
+    ('other', 'Other societal objectives'),
 )
 
 
@@ -123,6 +124,7 @@ class SocialImpactSearchPublication(models.Model):
 
 
 class ImpactMention(models.Model):
+    search = models.ForeignKey(SocialImpactSearch, on_delete=models.CASCADE )
     publication = models.ForeignKey(Publication, on_delete=models.CASCADE)
     page = models.IntegerField()
     sentence = models.TextField()
@@ -132,16 +134,29 @@ class ImpactMention(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     modified = models.DateTimeField(auto_now=True)
 
+    def __unicode__(self):
+        return f"[{self.publication.project}] {self.sentence} (Report: {self.publication})"
+
+    def __str__(self):
+        return f"[{self.publication.project}] {self.sentence} (Report: {self.publication})"
+
 
 class SIORMeasurement(models.Model):
     project = models.ForeignKey(Project, on_delete=models.CASCADE)
     evidence = models.ForeignKey(ImpactMention, on_delete=models.CASCADE)
-    sdg = models.CharField(max_length=300, choices=SDGs)
+    scientific_evidence = models.BooleanField(default=False, verbose_name='Is the evidence a scientific publication or '
+                                                                          'an official report?')
+    sdg = models.CharField(max_length=300, choices=SDGs, verbose_name='Social Target')
     percentage_improvement = models.FloatField(null=True, blank=True)
     description_improvement = models.TextField(null=True, blank=True)
     sustainability = models.BooleanField(default=False)
+    description_sustainability = models.TextField(null=True, blank=True)
     replicability = models.BooleanField(default=False)
+    description_replicability = models.TextField(null=True, blank=True)
     score = models.IntegerField(default=0, editable=False)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created = models.DateTimeField(auto_now_add=True)
+    modified = models.DateTimeField(auto_now=True)
 
     def __unicode__(self):
         return f"Project: {self.project}, Impact: {self.score}"
