@@ -9,7 +9,7 @@ function getBaseURL(server_subfolder) {
 
 function loadSummaryCards(server_subfolder) {
     var base_url = getBaseURL(server_subfolder);
-    var endpoint = base_url.concat("/", "api/sci-impact/total-data");
+    var endpoint = base_url.concat("/", "api/dashboard/total-data");
     $.ajax({
         method: "GET",
         url: endpoint,
@@ -32,7 +32,7 @@ function loadSummaryCards(server_subfolder) {
             console.log("Error!");
             console.log(error_data.responseText);
         }
-    })
+    });
 }
 
 function drawArticlesByYearChart(server_subfolder){
@@ -278,5 +278,285 @@ function generateSciImpactMenu(server_subfolder, impactObjs) {
             menuItem.appendChild(menuSpan);
             institutionMenu.appendChild(menuItem);
         }
+    }
+}
+
+
+function loadSocialImpactSummaryCards(server_subfolder) {
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/social-impact/projects-meta-data/");
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data){
+            var sy_elements = document.getElementsByClassName("start_year");
+            var ey_elements = document.getElementsByClassName("end_year");
+            for (i = 0; i < sy_elements.length; i++) {
+                sy_elements[i].textContent = data.start_year;
+                ey_elements[i].textContent = data.end_year;
+            }
+            document.getElementById("total_projects").innerHTML = data.total_projects;
+            document.getElementById("project_source").innerHTML = data.projects_source;
+            document.getElementById("active_projects").innerHTML = data.active_projects;
+            document.getElementById("projects_with_impact").innerHTML = data.projects_with_impact;
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data.responseText);
+        }
+    })
+}
+
+
+function createProjectList(server_subfolder) {
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/", "api/social-impact/projects/");
+     $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data){
+            // get impact column
+            var target_name, target_end_point, targets, target_scores, target_score;
+            for (i = 0; i < data.body_impact.length; i++) {
+                targets = '';
+                target_scores = '';
+                for (j = 0; j < data.body_impact[i].impact_targets.length; j++) {
+                    target_name = data.body_impact[i].impact_targets[j];
+                    target_score = data.body_impact[i].impact_scores[j]
+                    target_end_point = base_url.concat("/", "dashboard/social_impact/projects/impact/", data.body_impact[i].id, "/");
+                    targets += target_name + '<br>';
+                    target_scores += target_score + '<a href="' + target_end_point + '"> [more details]</a><br>';
+                }
+                data.body_impact[i].impact_on = targets;
+                data.body_impact[i].impact_scores = target_scores;
+            }
+            $('#project_details_impact').DataTable( {
+                "data": data.body_impact,
+                "columns": [
+                    { "width": "15%", "data": "name" },
+                    { "width": "30%", "data": "description" },
+                    { "width": "5%", "data": "status" },
+                    { "width": "5%", "data": "start_date" },
+                    { "width": "5%", "data": "end_date" },
+                    { "width": "15%", "data": "coordinator" },
+                    { "width": "15%", "data": "impact_on" },
+                    { "width": "15%", "data": "impact_scores" }
+                ]
+            } );
+            $('#project_details_no_impact').DataTable( {
+                "data": data.body_no_impact,
+                "columns": [
+                    { "data": "name" },
+                    { "data": "description" },
+                    { "data": "status" },
+                    { "data": "start_date" },
+                    { "data": "end_date" },
+                    { "data": "coordinator" }
+                ]
+            } );
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data.responseText);
+        }
+    })
+}
+
+
+function loadProjectSocialImpactSummaryCards(server_subfolder, project_id) {
+    var base_url = getBaseURL(server_subfolder);
+    var endpoint = base_url.concat("/api/social-impact/projects/impact/", project_id, "/overall/");
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data) {
+            document.getElementById("dh-title").innerHTML += data.name;
+            let sd_elements = document.getElementsByClassName("start_date");
+            let ed_elements = document.getElementsByClassName("end_date");
+            for (i = 0; i < sd_elements.length; i++) {
+                sd_elements[i].textContent = data.start_date;
+                ed_elements[i].textContent = data.end_date;
+            }
+            document.getElementById("social_targets").innerHTML = data.targets;
+            document.getElementById("overall_impact_score").innerHTML = data.overall_score;
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data.responseText);
+        }
+    })
+}
+
+
+function createSocialImpactTables(server_subfolder, project_id) {
+    let base_url = getBaseURL(server_subfolder);
+    let endpoint = base_url.concat("/", "api/social-impact/projects/impact/", project_id, "/details/");
+    let evidence_data = Array();
+    let sior_data = Array();
+    $.ajax({
+        method: "GET",
+        url: endpoint,
+        success: function(data){
+            const div_container = document.getElementById('container');
+            for (i = 0; i < data.impacts.length; i++) {
+                let target = 'Social Target: ' + data.impacts[i].social_target;
+                // create div row
+                let div_row = document.createElement('div');
+                div_row.className = 'row';
+                // create div col
+                let div_col = document.createElement('div');
+                div_col.className = 'col-xl-12 col-md-12 mb-4';
+                // create div card shadow
+                let div_card_shadow = document.createElement('div');
+                div_card_shadow.className = 'card shadow mb-4';
+                // create div card header
+                let div_card_header = document.createElement('div');
+                div_card_header.className = 'card-header py-3 d-flex flex-row align-items-center justify-content-between';
+                div_card_header.innerHTML = '<h6 class="m-0 font-weight-bold text-primary">' + target + '</h6>';
+                div_card_shadow.appendChild(div_card_header);
+                // create div card body
+                let div_card_body = document.createElement('div');
+                div_card_body.className = 'card-body';
+                div_card_shadow.appendChild(div_card_body);
+
+                // create empty div
+                let div_empty = document.createElement('div');
+                div_card_body.appendChild(div_empty);
+
+                // create div table responsive
+                let div_table = document.createElement('div');
+                div_table.className = 'table-responsive';
+                div_empty.appendChild(div_table);
+
+                // create evidence table
+                let table = document.createElement('table');
+                table.className = 'table table-bordered';
+                table.width = '100%';
+                table.cellspacing = '0';
+                table.id = 'tableevidence' + i+1;
+                // create table headers
+                let headers = Array('Evidence', 'Document', 'Page', 'Impact Keywords', 'File', 'Impact Dictionary');
+                for (j=0; j < headers.length; j++) {
+                    let header = table.createTHead();
+                    th = document.createElement('th');
+                    th.innerHTML = headers[j];
+                    header.appendChild(th);
+                }
+                // create table body
+                let table_body = document.createElement('tbody');
+                table.appendChild(table_body);
+                div_table.appendChild(table);
+
+                // create empty div
+                div_empty = document.createElement('div');
+                div_card_body.appendChild(div_empty);
+
+                // create div table responsive
+                div_table = document.createElement('div');
+                div_table.className = 'table-responsive';
+                div_empty.appendChild(div_table);
+
+                // create sior table
+                table = document.createElement('table');
+                table.className = 'table table-bordered';
+                table.width = '100%';
+                table.cellspacing = '0';
+                table.id = 'table_sior_' + i+1;
+                // create table headers
+                headers = Array('Evidence is scientific or official', 'Improvement (%)', 'Description of Improvement', 'Sustainability', 'Replicability');
+                for (j=0; j < headers.length; j++) {
+                    let header = table.createTHead();
+                    th = document.createElement('th');
+                    th.innerHTML = headers[j];
+                    header.appendChild(th);
+                }
+                // create table body
+                table_body = document.createElement('tbody');
+                table.appendChild(table_body);
+                div_table.appendChild(table);
+
+                div_col.appendChild(div_card_shadow);
+                div_row.appendChild(div_col);
+                div_container.appendChild(div_row);
+
+                evidence_data.push(
+                    {
+                        'evidence': data.impacts[i].evidence.sentence,
+                        'document': data.impacts[i].evidence.name,
+                        'page': data.impacts[i].evidence.page,
+                        'impact_keywords': data.impacts[i].impact_keywords,
+                        'file': '<a href="' + data.impacts[i].evidence.file + '>' + data.impacts[i].evidence.name + '</a>',
+                        'dictionary': data.impacts[i].dictionary
+                    }
+                );
+
+                sior_data.push(
+                    {
+                        'scientific': data.impacts[i].evidence.is_scientific,
+                        'improvement': data.impacts[i].percentage_improvement,
+                        'desc_improvement': data.impacts[i].description_improvement,
+                        'sustainability': data.impacts[i].description_sustainability,
+                        'replicability': data.impacts[i].description_replicability
+                    }
+                );
+            }
+            console.log($.fn.dataTable.tables());
+
+            /*for (i = 0; i < evidence_data.length; i++) {
+                table_evidence_id = '#table_evidence_' + i+1;
+                $('#tableevidence01').DataTable( {
+                "data": evidence_data[i],
+                "columns": [
+                    { "width": "35%", "data": "evidence" },
+                    { "width": "20%", "data": "document" },
+                    { "width": "5%", "data": "page" },
+                    { "width": "10%", "data": "impact_keywords" },
+                    { "width": "20%", "data": "file" },
+                    { "width": "10%", "data": "dictionary" }
+                ]
+                });
+            }*/
+
+             /*impact_data = {
+                'evidence_data': evidence_data,
+                'sior_data': sior_data
+             };*/
+
+             //return impact_data; //loadSocialImpactTables(impact_data);
+        },
+        error: function(error_data){
+            console.log("Error!");
+            console.log(error_data.responseText);
+        }
+    });
+}
+
+
+function loadSocialImpactTables(data) {
+    let table_evidence_id, table_sior_id;
+    for (i = 0; i < data.evidence_data.length; i++) {
+        table_evidence_id = '#table_evidence_' + i+1;
+        table_sior_id = '#table_sior_' + i+1;
+        $(table_evidence_id).DataTable( {
+            "data": data.evidence_data[i],
+            "columns": [
+                { "width": "35%", "data": "evidence" },
+                { "width": "20%", "data": "document" },
+                { "width": "5%", "data": "page" },
+                { "width": "10%", "data": "impact_keywords" },
+                { "width": "20%", "data": "file" },
+                { "width": "10%", "data": "dictionary" }
+            ]
+        });
+        $(table_sior_id).DataTable( {
+            "data": data.sior_data[i],
+            "columns": [
+                { "width": "10%", "data": "scientific" },
+                { "width": "5%", "data": "improvement" },
+                { "width": "25%", "data": "desc_improvement" },
+                { "width": "20%", "data": "sustainability" },
+                { "width": "20%", "data": "replicability" }
+            ]
+        });
     }
 }
