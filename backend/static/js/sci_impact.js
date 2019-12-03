@@ -391,138 +391,85 @@ function loadProjectSocialImpactSummaryCards(server_subfolder, project_id) {
 function createSocialImpactTables(server_subfolder, project_id) {
     let base_url = getBaseURL(server_subfolder);
     let endpoint = base_url.concat("/", "api/social-impact/projects/impact/", project_id, "/details/");
-    let evidence_data = Array();
-    let sior_data = Array();
+    let target, evidence_data, sior_data, impact_header_id, table_evidence_id;
     $.ajax({
         method: "GET",
         url: endpoint,
         success: function(data){
             const div_container = document.getElementById('container');
             for (i = 0; i < data.impacts.length; i++) {
-                let target = 'Social Target: ' + data.impacts[i].social_target;
-                // create div row
-                let div_row = document.createElement('div');
-                div_row.className = 'row';
-                // create div col
-                let div_col = document.createElement('div');
-                div_col.className = 'col-xl-12 col-md-12 mb-4';
-                // create div card shadow
-                let div_card_shadow = document.createElement('div');
-                div_card_shadow.className = 'card shadow mb-4';
-                // create div card header
-                let div_card_header = document.createElement('div');
-                div_card_header.className = 'card-header py-3 d-flex flex-row align-items-center justify-content-between';
-                div_card_header.innerHTML = '<h6 class="m-0 font-weight-bold text-primary">' + target + '</h6>';
-                div_card_shadow.appendChild(div_card_header);
-                // create div card body
-                let div_card_body = document.createElement('div');
-                div_card_body.className = 'card-body';
-                div_card_shadow.appendChild(div_card_body);
-
-                // create empty div
-                let div_empty = document.createElement('div');
-                div_card_body.appendChild(div_empty);
-
-                // create div table responsive
-                let div_table = document.createElement('div');
-                div_table.className = 'table-responsive';
-                div_empty.appendChild(div_table);
-
-                // create evidence table
-                let table = document.createElement('table');
-                table.className = 'table table-bordered';
-                table.width = '100%';
-                table.cellspacing = '0';
-                table.id = 'tableevidence' + i+1;
-                // create table headers
-                let headers = Array('Evidence', 'Document', 'Page', 'Impact Keywords', 'File', 'Impact Dictionary');
-                for (j=0; j < headers.length; j++) {
-                    let header = table.createTHead();
-                    th = document.createElement('th');
-                    th.innerHTML = headers[j];
-                    header.appendChild(th);
-                }
-                // create table body
-                let table_body = document.createElement('tbody');
-                table.appendChild(table_body);
-                div_table.appendChild(table);
-
-                // create empty div
-                div_empty = document.createElement('div');
-                div_card_body.appendChild(div_empty);
-
-                // create div table responsive
-                div_table = document.createElement('div');
-                div_table.className = 'table-responsive';
-                div_empty.appendChild(div_table);
-
-                // create sior table
-                table = document.createElement('table');
-                table.className = 'table table-bordered';
-                table.width = '100%';
-                table.cellspacing = '0';
-                table.id = 'table_sior_' + i+1;
-                // create table headers
-                headers = Array('Evidence is scientific or official', 'Improvement (%)', 'Description of Improvement', 'Sustainability', 'Replicability');
-                for (j=0; j < headers.length; j++) {
-                    let header = table.createTHead();
-                    th = document.createElement('th');
-                    th.innerHTML = headers[j];
-                    header.appendChild(th);
-                }
-                // create table body
-                table_body = document.createElement('tbody');
-                table.appendChild(table_body);
-                div_table.appendChild(table);
-
-                div_col.appendChild(div_card_shadow);
-                div_row.appendChild(div_col);
-                div_container.appendChild(div_row);
-
-                evidence_data.push(
-                    {
-                        'evidence': data.impacts[i].evidence.sentence,
-                        'document': data.impacts[i].evidence.name,
-                        'page': data.impacts[i].evidence.page,
-                        'impact_keywords': data.impacts[i].impact_keywords,
-                        'file': '<a href="' + data.impacts[i].evidence.file + '>' + data.impacts[i].evidence.name + '</a>',
-                        'dictionary': data.impacts[i].dictionary
-                    }
-                );
-
-                sior_data.push(
-                    {
-                        'scientific': data.impacts[i].evidence.is_scientific,
-                        'improvement': data.impacts[i].percentage_improvement,
-                        'desc_improvement': data.impacts[i].description_improvement,
-                        'sustainability': data.impacts[i].description_sustainability,
-                        'replicability': data.impacts[i].description_replicability
-                    }
-                );
-            }
-            console.log($.fn.dataTable.tables());
-
-            /*for (i = 0; i < evidence_data.length; i++) {
-                table_evidence_id = '#table_evidence_' + i+1;
-                $('#tableevidence01').DataTable( {
-                "data": evidence_data[i],
-                "columns": [
-                    { "width": "35%", "data": "evidence" },
-                    { "width": "20%", "data": "document" },
-                    { "width": "5%", "data": "page" },
-                    { "width": "10%", "data": "impact_keywords" },
-                    { "width": "20%", "data": "file" },
-                    { "width": "10%", "data": "dictionary" }
-                ]
+                impact_header_id = 'header_impact_' + (i+1);
+                table_evidence_id = '#table_evidence_' + (i+1);
+                table_sior_id = '#table_sior_' + (i+1);
+                document.getElementById(impact_header_id).innerHTML = 'Social Target: ' + data.impacts[i].social_target;
+                doc_url = base_url.concat("/", data.impacts[i].evidence.file);
+                dic_url = base_url.concat("/", data.impacts[i].dictionary);
+                evidence_data = [{
+                    'evidence': data.impacts[i].evidence.sentence,
+                    'document': '<a href="'+ doc_url +'" target="_blank">'+ data.impacts[i].evidence.name +'</a>',
+                    'page': data.impacts[i].evidence.page,
+                    'impact_keywords': data.impacts[i].evidence.impact_keywords,
+                    'dictionary': '<a href="'+dic_url+'" target="_blank">Download</a>'
+                }];
+                $(table_evidence_id).DataTable({
+                    "data": evidence_data,
+                    "columns": [
+                        { "width": "35%", "data": "evidence" },
+                        { "width": "20%", "data": "document" },
+                        { "width": "5%", "data": "page" },
+                        { "width": "10%", "data": "impact_keywords" },
+                        { "width": "10%", "data": "dictionary" }
+                    ]
                 });
-            }*/
-
-             /*impact_data = {
-                'evidence_data': evidence_data,
-                'sior_data': sior_data
-             };*/
-
-             //return impact_data; //loadSocialImpactTables(impact_data);
+                if (data.impacts[i].percentage_improvement != null) {
+                    improvement = data.impacts[i].percentage_improvement;
+                }
+                else {
+                    improvement = '-';
+                }
+                if (data.impacts[i].description_achievement != '') {
+                    desc_achievement = data.impacts[i].description_achievement;
+                }
+                else {
+                    desc_achievement = '-';
+                }
+                if (data.impacts[i].description_sustainability != '') {
+                    sustainability = data.impacts[i].description_sustainability;
+                } else {
+                    sustainability = '-'
+                }
+                if (data.impacts[i].description_replicability != '') {
+                    replicability = data.impacts[i].description_replicability;
+                } else {
+                    replicability = '-';
+                }
+                if (data.impacts[i].evidence.is_scientific == 'True') {
+                    scientific_evidence = 'Yes';
+                }
+                else {
+                    scientific_evidence = 'No';
+                }
+                sior_data = [{
+                    'improvement': improvement,
+                    'desc_achievement': desc_achievement,
+                    'sustainability': sustainability,
+                    'replicability': replicability,
+                    'scientific': scientific_evidence,
+                    'score': data.impacts[i].score
+                }];
+                $(table_sior_id).DataTable({
+                    "data": sior_data,
+                    "columns": [
+                        { "width": "10%", "data": "improvement" },
+                        { "width": "15%", "data": "desc_achievement" },
+                        { "width": "20%", "data": "sustainability" },
+                        { "width": "20%", "data": "replicability" },
+                        { "width": "10%", "data": "scientific" },
+                        { "width": "5%", "data": "score" }
+                    ]
+                });
+            }
+            loadOtherDocsTables(data, base_url);
         },
         error: function(error_data){
             console.log("Error!");
@@ -532,31 +479,20 @@ function createSocialImpactTables(server_subfolder, project_id) {
 }
 
 
-function loadSocialImpactTables(data) {
-    let table_evidence_id, table_sior_id;
-    for (i = 0; i < data.evidence_data.length; i++) {
-        table_evidence_id = '#table_evidence_' + i+1;
-        table_sior_id = '#table_sior_' + i+1;
-        $(table_evidence_id).DataTable( {
-            "data": data.evidence_data[i],
-            "columns": [
-                { "width": "35%", "data": "evidence" },
-                { "width": "20%", "data": "document" },
-                { "width": "5%", "data": "page" },
-                { "width": "10%", "data": "impact_keywords" },
-                { "width": "20%", "data": "file" },
-                { "width": "10%", "data": "dictionary" }
-            ]
-        });
-        $(table_sior_id).DataTable( {
-            "data": data.sior_data[i],
-            "columns": [
-                { "width": "10%", "data": "scientific" },
-                { "width": "5%", "data": "improvement" },
-                { "width": "25%", "data": "desc_improvement" },
-                { "width": "20%", "data": "sustainability" },
-                { "width": "20%", "data": "replicability" }
-            ]
-        });
+function loadOtherDocsTables(data, base_url) {
+    let docs = Array();
+    for (i = 0; i < data.docs.length; i++) {
+        doc_url = base_url.concat("/", data.docs[i].url);
+        docs.push(
+            {
+                'name': '<a href="' + doc_url + '" target="_blank">'+ data.docs[i].name + '</a>'
+            }
+        );
     }
+    $('#table_other_docs').DataTable( {
+        "data": docs,
+        "columns": [
+            { "data": "name" }
+        ]
+    });
 }
