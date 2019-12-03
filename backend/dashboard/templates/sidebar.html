@@ -47,23 +47,14 @@
     <div class="sidebar-heading">Social Impact</div>
     <!-- Nav Item -->
     <li class="nav-item">
-        <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#projects" aria-expanded="true"
-           aria-controls="projects">
-            <i class="fas fa-fw fa-flask"></i>
+        <a class="nav-link collapsed" href="{% url 'social_impact_projects' %}" aria-controls="projects">
+            <i class="fas fa-fw fa-project-diagram"></i>
             <span>Projects</span>
         </a>
-        <div id="projects" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionSidebar">
-          <div class="bg-white py-2 collapse-inner rounded">
-              <!-- <h6 class="collapse-header">Custom Components:</h6> -->
-              <a class="collapse-item" href="#">Project 1</a>
-              <a class="collapse-item" href="#">Project 2</a>
-              <a class="collapse-item" href="#">Project 3</a>
-          </div>
-        </div>
     </li>
     <!-- Nav Item -->
     <li class="nav-item">
-        <a class="nav-link collapsed" href="#">
+        <a class="nav-link collapsed" href="{% url 'social_impact_methodology' %}">
             <i class="fas fa-fw fa-wrench"></i>
             <span>Methodology</span>
         </a>
