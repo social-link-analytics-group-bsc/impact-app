@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework import viewsets
-from sci_impact.models import Scientist, Article, ArtifactCitation, Impact, ImpactDetail, FieldCitations, Artifact, \
+from sci_impact.models import Scientist, Article, Impact, ImpactDetail, FieldCitations, Artifact, \
                               Authorship, Institution
 from sci_impact.api.serializers import ScientistSerializer, ArticleSerializer
 
@@ -52,28 +52,6 @@ class ArticleViewSet(viewsets.ModelViewSet):
     queryset = Article.objects.all()
     serializer_class = ArticleSerializer
     http_method_names = ['get', 'post', 'head', 'delete']
-
-
-class TotalData(APIView):
-    authentication_classes = (SessionAuthentication, BasicAuthentication)
-    permission_classes = (IsAuthenticated,)
-
-    def get(self, request, format=None):
-        articles = Article.objects.filter(year__in=years_range, inb_pi_as_author=True, created_by=request.user)
-        total_citations = Article.objects.filter(year__in=range(2009,2017), inb_pi_as_author=True).\
-                                                 aggregate(Sum('cited_by'))['cited_by__sum']
-        total_pis = Scientist.objects.filter(is_pi_inb=True).count()
-        response = {
-            'total_year_range': (years_range[0], years_range[-1]),
-            'total_pis': total_pis,
-            'total_articles': articles.count(),
-            'articles_source': 'PubMed and Scopus',
-            'total_citations': total_citations,
-            'citations_source': 'PubMed Central and Scopus',
-            'total_projects': 26,
-            'projects_source': 'Cordis',
-        }
-        return Response(response)
 
 
 class ArticlesByYear(APIView):
