@@ -1,0 +1,176 @@
+{% extends 'base_dashboard.html' %}
+
+<script>
+{% block javascript %}
+    loadProjectSocialImpactSummaryCards("{{ server_subfolder }}", "{{ project_id }}");
+    createSocialImpactTables("{{ server_subfolder }}", "{{ project_id }}");
+{% endblock %}
+</script>
+
+{% block content %}
+<div id="container" class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between">
+        <!-- <h3 id="dh-title" class="h3 mb-0 text-gray-800"><b>Scientific Impact:</b></h3>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">Social Impact</li>
+                <li class="breadcrumb-item">Project</li>
+                <li id="dh-title" class="breadcrumb-item active" aria-current="page"></li>
+            </ol>
+        </nav>
+    </div>
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Dates</div>
+                    <div class="h5 mb-0 font-weight-bold"><span class="start_date"></span> - <span class="end_date"></span></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-calendar-alt fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Social Targets</div>
+                    <div id="social_targets" class="h5 mb-0 font-weight-bold"></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-bullseye fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Overall Social Impact Score</div>
+                    <div class="h5 mb-0 font-weight-bold"><span id="overall_impact_score"></span> <span class="small">out of 7</span></div>
+                    <div class="small mb-0 text-gray-700">
+                        The methodology uses a scale of 1 to 7, where 7 indicates the
+                        maximum level of impact while 1 suggests some sort of impact.
+                    </div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-clipboard-list fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    {% for num_impact in num_impacts %}
+        <div class="row">
+            <div class="col-xl-12 col-md-12 mb-4">
+                <div class="card shadow mb-4">
+                    <!-- Card Header -->
+                    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                        <h6 id="header_impact_{{ num_impact }}" class="m-0 font-weight-bold text-primary"></h6>
+                    </div>
+                    <!-- Card Body -->
+                    <div class="card-body">
+                        <div class="">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="table_sior_{{ num_impact }}" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Improvement (%)<sup>1</sup></th>
+                                            <th>Description of Achievement</th>
+                                            <th>Sustainability<sup>2</sup></th>
+                                            <th>Replicability<sup>3</sup></th>
+                                            <th>Evidence is scientific or official<sup>4</sup></th>
+                                            <th>Score<sup>5</sup></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="small">
+                            <sup>1</sup>Percentage of improvement achieved in relation to the starting situation<br>
+                            <sup>2</sup>The impact achieved has showed to be sustainable throughout time<br>
+                            <sup>3</sup>The actions based on the project findings have been successfully implemented in more than one context<br>
+                            <sup>4</sup>Evidence of social impact is published either on scientific journals, governmental or non-governmental reports<br>
+                            <sup>5</sup>Score assigned according to the following rules:<br>
+                            - 7: The impact meets all the criteria (i.e., 2, 3, 4) and has more than or equal to 30% of improvement<br>
+                            - 6: The impact meets all the criteria and has an improvement between 20% and 29%<br>
+                            - 5: The impact meets all the criteria and has an improvement between 10% and 19%<br>
+                            - 4: The impact meets all the criteria and has some % of improvement (or the % of improvement is not available)<br>
+                            - 3: The impact has achieved some % of improvement (or the % of improvement is not available) and meets at least 2 of the other criteria (i.e., 2, 3, 4)<br>
+                            - 2: The impact has achieved some % of improvement (or the % of improvement is not available) and meets at least 1 of the other criteria<br>
+                            - 1: There is a mention of impact but the % of improvement is not available
+                        </p>
+                        <br>
+                        <h4><span class="badge badge-success">Details of the evidence</span></h4>
+                        <br>
+                        <div class="">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="table_evidence_{{ num_impact }}" width="100%" cellspacing="0">
+                                    <thead>
+                                        <tr>
+                                            <th>Impact Text<sup>1</sup></th>
+                                            <th>Source<sup>2</sup></th>
+                                            <th>Page<sup>3</sup></th>
+                                            <th>Impact Keywords<sup>4</sup></th>
+                                            <th>Impact Dictionary<sup>5</sup></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <hr>
+                        <p class="small">
+                            <sup>1</sup>Piece of text with the evidence of impact<br>
+                            <sup>2</sup>Document that contains the impact text<br>
+                            <sup>3</sup>Page where the evidence of impact was found within the document<br>
+                            <sup>4</sup>Keywords of impact found in the text<br>
+                            <sup>5</sup>Dictionary with vocabulary of impact used to search for evidence of impact<br>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Other documents of the projects that were also inspected for mentions of impact</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="table_other_docs" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

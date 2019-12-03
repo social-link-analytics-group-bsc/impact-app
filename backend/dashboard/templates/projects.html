@@ -1,0 +1,145 @@
+{% extends 'base_dashboard.html' %}
+
+<script>
+{% block javascript %}
+    // Load data for summary cards
+    loadSocialImpactSummaryCards("{{ server_subfolder }}");
+    // Load table of projects
+    createProjectList("{{ server_subfolder }}");
+{% endblock %}
+</script>
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Heading -->
+    <div class="d-sm-flex align-items-center justify-content-between">
+        <!-- <h3 id="dh-title" class="h3 mb-0 text-gray-800"><b>Scientific Impact:</b></h3>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">Social Impact</li>
+                <li class="breadcrumb-item active" aria-current="page">Projects</li>
+            </ol>
+        </nav>
+    </div>
+    <!-- Summary Cards -->
+    <div class="row">
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total projects</div>
+                    <div id="total_projects" class="h5 mb-0 font-weight-bold text-gray-800"></div>
+                    <div class="small mb-0">Period: <span class="start_year"></span>-<span class="end_year"></span></div>
+                    <div class="small mb-0 text-gray-700">Source: <b><span id="project_source"></span></b></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-project-diagram fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-danger shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Active Projects</div>
+                    <div id="active_projects" class="h5 mb-0 font-weight-bold"></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-toggle-on fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-xl-4 col-md-4 mb-4">
+          <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+              <div class="row no-gutters align-items-center">
+                <div class="col mr-2">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">Projects with evidence of impact</div>
+                    <div id="projects_with_impact" class="h5 mb-0 font-weight-bold"></div>
+                </div>
+                <div class="col-auto">
+                  <i class="fas fa-bullseye fa-3x text-gray-300"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </div>
+    <!-- Table of projects with evidence of impact-->
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Project with evidence of impact</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="project_details_impact" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Start date</th>
+                                        <th>End date</th>
+                                        <th>Coordinator</th>
+                                        <th>Impact target<sup>1</sup></th>
+                                        <th>Score<sup>2</sup></th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <hr>
+                    <p class="small">
+                        <sup>1</sup>Social target connected to the identified impact (SDG=<a target="_blank" href="http://www.un.org/sustainabledevelopment/sustainable-development-goals/">United Nations Sustainable Development Goal</a>)<br>
+                        <sup>2</sup>Score assigned based on the method <a href="https://sior.ub.edu/indicators" target="_blank">Social Impact Open Repository (SIOR)</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Table of projects without evidence of impact-->
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header -->
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Project without evidence of impact</h6>
+                </div>
+                <!-- Card Body -->
+                <div class="card-body">
+                    <div class="">
+                        <div class="table-responsive">
+                            <table class="table table-bordered" id="project_details_no_impact" width="100%" cellspacing="0">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th>Status</th>
+                                        <th>Start date</th>
+                                        <th>End date</th>
+                                        <th>Coordinator</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base_dashboard.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between">
+        <!-- <h1 class="h3 mb-0 text-gray-800">Scientific Impact Methodology</h1>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm"><i class="fas fa-download fa-sm text-white-50"></i> Generate Report</a> -->
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">Social Impact</li>
+                <li id="dh-title" class="breadcrumb-item active" aria-current="page">Methodology</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="row">
+        <div class="col-xl-12 col-md-12 mb-4">
+            <div class="card shadow mb-4">
+                <!-- Card Header - Dropdown
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                    <h6 class="m-0 font-weight-bold text-primary">Definition and indicators</h6>
+                </div> -->
+                <!-- Card Body -->
+                <div class="card-body">
+                    By <b>social impact</b>, we understand as the social improvements achieved as consequence of
+                    implementing the results of a research project.  Within the various methods
+                    proposed in the literature to measure the social impact of research (e.g., ), we decided to employ
+                    the method <a href="https://sior.ub.edu/indicators" target="_blank">Social Impact Open Repository (SIOR)</a>, which was proposed
+                    by the EU-funded project <a href="https://cordis.europa.eu/project/rcn/111235/factsheet/en" target="_blank">IMPACT-EV</a> as a
+                    method to monitoring the impact of EU framework programmes.
+                    <br><br><h6><span><b>Indicators</b></span></h6>
+                    <table class="table table-responsive table-hover">
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Social Target</td>
+                                <td>There is a connection to United Nations Sustainable Development Goals, EU2020 targets or other similar official targets</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>Improvement</td>
+                                <td>Percentage of improvement achieved concerning the starting situation</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Replicability</td>
+                                <td>The actions based on the project findings have been successfully implemented in more than one context</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>Sustainability</td>
+                                <td>The impact achieved has showed to be sustainable throughout time</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>Evidence published in scientific or official document</td>
+                                <td>Evidence of social impact is published either on scientific journals, governmental or non-governmental reports</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br>
+                    Only evidence of impact that has connection with social targets are considered in the analysis. We only report
+                    evaluations of impact that have connection with social targets, being them the United Nations Sustainable Development
+                    Goals (SDG) or others (e.g., EU2020).<br>
+                    <br><h6><span><b>Score System</b></span></h6>
+                    <table class="table table-responsive table-hover">
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>Score</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>7</td>
+                                <td>The impact meets all the indicators (i.e., 3, 4, 5) and has more than or equal to 30% of improvement</td>
+                            </tr>
+                            <tr>
+                                <td>6</td>
+                                <td>The impact meets all the criteria and has an improvement between 20% and 29%</td>
+                            </tr>
+                            <tr>
+                                <td>5</td>
+                                <td>The impact meets all the criteria and has an improvement between 10% and 19%</td>
+                            </tr>
+                            <tr>
+                                <td>4</td>
+                                <td>The impact meets all the criteria and has some % of improvement (or the % of improvement is not available)</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>The impact has achieved some % of improvement (or the % of improvement is not available) and meets at least 2 of the other criteria (i.e., 3, 4, 5)</td>
+                            </tr>
+                            <tr>
+                                <td>2</td>
+                                <td>The impact has achieved some % of improvement (or the % of improvement is not available) and meets at least 1 of the other criteria</td>
+                            </tr>
+                            <tr>
+                                <td>1</td>
+                                <td>There is a mention of impact but the % of improvement is not available</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <br><h6><span><b>Illustrative Example</b></span></h6>
+                    <table class="table table-responsive table-hover">
+                        <caption class="small">Social impact of projects AA and BB</caption>
+                        <thead>
+                            <tr class="bg-primary text-white">
+                                <th>Project</th>
+                                <th>Social Target</th>
+                                <th>% of Improvement</th>
+                                <th>Description of Achievement</th>
+                                <th>Replicability</th>
+                                <th>Sustainability</th>
+                                <th>Evidence reported in scientific or official document</th>
+                                <th>Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Project AA</td>
+                                <td>No Poverty (SDG #1)</td>
+                                <td>5%</td>
+                                <td>Reduce number of families in poverty situation</td>
+                                <td>-</td>
+                                <td>-</td>
+                                <td>Yes (scientific paper)</td>
+                                <td>2</td>
+                            </tr>
+                            <tr>
+                                <td>Project BB</td>
+                                <td>Good Health and Well-being (SDG #3)</td>
+                                <td>21%</td>
+                                <td>Reduce dengue contagion</td>
+                                <td>Implemented the solution in cities of three Latin American countries</td>
+                                <td>The solutions has successfully been implementing for 5 years</td>
+                                <td>Yes (official report)</td>
+                                <td>6</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
