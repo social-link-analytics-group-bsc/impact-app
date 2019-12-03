@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.conf import settings
 from sci_impact.models import Scientist, Institution
+from social_impact.models import SIORMeasurement
 
 import json
 
@@ -48,16 +49,28 @@ def sci_impact(request, **kwargs):
 
 
 def social_impact(request):
-    # Social Impact
-    total_projects = 26
-    social_impact = 0.0
     context = {
-        'total_projects': total_projects,
-        'social_impact': social_impact
+        'server_subfolder': settings.SERVER_SUBFOLDER,
+        'impact_objs': json.dumps(__get_impact_objs())
     }
-    return render(request, 'sci_impact.html', context)
+    return render(request, 'projects.html', context)
+
+
+def social_impact_project(request, **kwargs):
+    project_id = kwargs.get('id')
+    context = {
+        'server_subfolder': settings.SERVER_SUBFOLDER,
+        'impact_objs': json.dumps(__get_impact_objs()),
+        'project_id': project_id,
+        'num_impacts': str(SIORMeasurement.objects.filter(created_by=request.user, project__id=project_id).count())
+    }
+    return render(request, 'project_impact.html', context)
 
 
 def sci_impact_methodology(request, **kwargs):
     return render(request, 'sci_impact_methodology.html', {'impact_objs': json.dumps(__get_impact_objs())})
+
+
+def social_impact_methodology(request, **kwargs):
+    return render(request, 'social_impact_methodology.html', {'impact_objs': json.dumps(__get_impact_objs())})
 
