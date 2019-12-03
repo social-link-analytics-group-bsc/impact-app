@@ -14,6 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+from django.conf import settings
+from django.conf.urls.static import static
 from django.contrib.auth.models import User, Group
 from django.contrib import admin
 from django.urls import path
@@ -35,7 +37,8 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),  # authentication
     path('api/', schema_view),  # api root endpoint
     path('api/sci-impact/', include('sci_impact.urls')),  # sci_impact api endpoints
-    path('dashboard/', include('dashboard.urls')),  # dashboard api endpoints
+    path('api/social-impact/', include('social_impact.urls')),  # social_impact api endpoints
+    path('dashboard/', include('dashboard.urls')),  # dashboard endpoints
     path('api-auth/', include('rest_framework.urls')),  # authentication
     path('login_error', index),  # root endpoint
 ]
@@ -43,3 +46,7 @@ urlpatterns = [
 urlpatterns += [
     path('', index, name='index'),  # root endpoint
 ]
+
+
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
