@@ -81,7 +81,7 @@ official bodies;
 
 | Organization  | Project    | SDG (UN 2030) [1] | % of Improvement achieved [2] | Description of achievement [3]           | Sustainability [4] | Replicability [5] | Social impact report | Score-Impact [6] |
 |---------------|------------|---------------|---------------------------|--------------------------------------|----------------|---------------|----------------------|--------------|
-| Institution A | Project AA | Poverty       | 5%                        | Reduce families in poverty situation | No             | No            | Scientific acticle   | 4            |
+| Institution A | Project AA | No Poverty (SDG #1)   | 5%                        | Reduce number of families in poverty situation | No             | No            | Scientific acticle   | 4            |
 |               | Project BB | Health        | 21%                       | Reduce dengue contagion              | Yes            | Yes           | Official report      | 9            |
 
 [1] Respond to at least one of the 2030 United Nations Social Development Goal (or other similar official social goals 
