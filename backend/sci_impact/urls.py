@@ -16,7 +16,6 @@ urlpatterns = [
     # ex: /api/scientist/1
     #re_path(r'^scientists/(?P<pk>[0-9]+)/$', scientist_detail),
     path('', include(router.urls)),
-    path('total-data/', views.TotalData.as_view()),
     path('articles-by-year/', views.ArticlesByYear.as_view()),
     path('citations-by-year/', views.CitationsByYear.as_view()),
     path('sci-impact-total-data/', views.SciImpactTotal.as_view()),
