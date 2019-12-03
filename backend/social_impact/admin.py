@@ -349,7 +349,7 @@ class CustomSIORModelForm(forms.ModelForm):
 @admin.register(SIORMeasurement)
 class SIORMeasurementAdmin(admin.ModelAdmin):
     list_display = ('project', 'pretty_evidence', 'scientific_evidence', 'sdg', 'percentage_improvement',
-                    'description_improvement', 'sustainability', 'description_sustainability', 'replicability',
+                    'description_achievement', 'sustainability', 'description_sustainability', 'replicability',
                     'description_replicability', 'score')
     form = CustomSIORModelForm
 
