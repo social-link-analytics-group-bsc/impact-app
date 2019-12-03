@@ -11,23 +11,23 @@ STATUSES = (
 )
 
 SDGs = (
-    ('poverty', 'SGD 1. No poverty'),
-    ('hunger', 'SGD 2. Zero hunger'),
-    ('health', 'SGD 3. Good health and well-being'),
-    ('education', 'SGD 4. Quality education'),
-    ('gender', 'SGD 5. Gender equality'),
-    ('water', 'SGD 6. Clean water and sanitation'),
-    ('energy', 'SGD 7. Affordable and clean energy'),
-    ('work', 'SGD 8. Decent work and economic growth'),
-    ('industry', 'SGD 9. Industry, innovation, and infrastructure'),
-    ('inequalities', 'SGD 10. Reduced inequalities'),
-    ('sustainable', 'SGD 11. Sustainable cities and communities'),
-    ('consumption', 'SGD 12. Responsible consumption and production'),
-    ('climate', 'SGD 13. Climate action'),
-    ('life_water', 'SGD 14. Life below water'),
-    ('life_land', 'SGD 15. Life on land'),
-    ('peace', 'SGD 16. Peace, justice, and strong institutions'),
-    ('partnership', 'SGD 17. Partnership for the goals'),
+    ('poverty', 'No poverty (SDG #1)'),
+    ('hunger', 'Zero hunger (SDG #2)'),
+    ('health', 'Good health and well-being (SGD #3)'),
+    ('education', 'Quality education (SGD #4)'),
+    ('gender', 'Gender equality (SGD #5)'),
+    ('water', 'Clean water and sanitation (SGD #6)'),
+    ('energy', 'Affordable and clean energy (SGD #7)'),
+    ('work', 'Decent work and economic growth (SGD #8)'),
+    ('industry', 'Industry, innovation, and infrastructure (SGD #9)'),
+    ('inequalities', 'Reduced inequalities (SGD #10)'),
+    ('sustainable', 'Sustainable cities and communities (SGD #11)'),
+    ('consumption', 'Responsible consumption and production (SGD #12)'),
+    ('climate', 'Climate action (SGD #13)'),
+    ('life_water', 'Life below water (SGD #14)'),
+    ('life_land', 'Life on land (SGD #15)'),
+    ('peace', 'Peace, justice, and strong institutions (SGD #16)'),
+    ('partnership', 'Partnership for the goals (SGD #17)'),
     ('other', 'Other societal objectives'),
 )
 
@@ -148,7 +148,7 @@ class SIORMeasurement(models.Model):
                                                                           'an official report?')
     sdg = models.CharField(max_length=300, choices=SDGs, verbose_name='Social Target')
     percentage_improvement = models.FloatField(null=True, blank=True)
-    description_improvement = models.TextField(null=True, blank=True)
+    description_achievement = models.TextField(null=True, blank=True)
     sustainability = models.BooleanField(default=False)
     description_sustainability = models.TextField(null=True, blank=True)
     replicability = models.BooleanField(default=False)
