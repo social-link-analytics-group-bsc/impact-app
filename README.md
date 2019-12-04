@@ -173,6 +173,14 @@ DATABASES = {
 13. Get into the backend directory and run `celery worker -A backend --loglevel=info`. Celery is used to execute 
 long-running tasks in background
 
+### PDF2Text
+
+ImpactApp uses [pdftotext](https://pypi.org/project/pdftotext/) to extract text from pdf files. Pdftotext depends on
+[poppler](https://poppler.freedesktop.org/) a pdf rendering library that should be installed as part of the installation
+process. This [guidelines](https://gist.github.com/Dayjo/618794d4ff37bb82ddfb02c63b450a81) explains how to install poppler 
+in Ubuntu. To complete the installation of poppler some utilitarian functions of the library should be installed.
+In Ubuntu poppler utils can be installed by executing `sudo apt-get install poppler-utils`.
+
 ## Technologies
 
 1. [Python 3.4](https://www.python.org/downloads/)
@@ -180,6 +188,7 @@ long-running tasks in background
 3. [Django 2.2](https://www.djangoproject.com)
 4. [Biopython](https://biopython.org/)
 5. [Celery](http://www.celeryproject.org/)
+6. [PDFtoText](https://pypi.org/project/pdftotext/)
 
 ## Issues
 
@@ -188,4 +197,4 @@ suggestions.
 
 ## Contributors
 
-[Jorge Saldivar](https://github.com/joausaga), María José Rementería, Nataly Buslón, and Salvador Capella
+[Jorge Saldivar](https://github.com/joausaga), Nataly Buslón, María José Rementería, and Salvador Capella
