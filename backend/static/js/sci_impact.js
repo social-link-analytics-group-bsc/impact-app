@@ -9,7 +9,7 @@ function getBaseURL(server_subfolder) {
 
 function loadSummaryCards(server_subfolder) {
     var base_url = getBaseURL(server_subfolder);
-    var endpoint = base_url.concat("/", "api/dashboard/total-data");
+    var endpoint = base_url.concat("/", "dashboard/total-data");
     $.ajax({
         method: "GET",
         url: endpoint,
