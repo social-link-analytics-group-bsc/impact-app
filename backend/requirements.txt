@@ -27,6 +27,7 @@ elsapy==0.4.6
 future==0.17.1
 gender-guesser==0.4.0
 get==2019.3.22
+gunicorn==19.9.0
 hammock==0.2.4
 idna==2.8
 importlib-metadata==0.23
