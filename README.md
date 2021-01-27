@@ -190,6 +190,26 @@ In Ubuntu poppler utils can be installed by executing `sudo apt-get install popp
 5. [Celery](http://www.celeryproject.org/)
 6. [PDFtoText](https://pypi.org/project/pdftotext/)
 
+## Structure
+
+Initially, the application was planned to be structured in two main modules: the
+frontend and the backend. In this way, we could separate the graphic interface from
+the business logic. The frontend could not be implemented and provisionally the UI
+was included "within the backend." Next, the structure of the backend is
+described.
+
+```
+...
+├── backend                             <- Source code of the application
+│   ├── dashboard                       <- Module that implements the dashboard
+│   ├── data_collector                  <- Module used to collect information about scientific articles from academic repositories (scopus, pubmed)
+|   |── sci_impact                      <- Module that implements the scientific impact features of the application
+|   |── social_impact                   <- Module that implements the social impact features of the application
+|   |── static                          <- Directory with static resources (images, javascript and css files)
+|   |── template                        <- Files of the template used in the dashboard
+...
+```
+
 ## Issues
 
 Please use [Github's issue tracker](https://github.com/ParticipaPY/politic-bots/issues/new) to report issues and 
