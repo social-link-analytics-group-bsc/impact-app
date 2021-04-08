@@ -16,7 +16,7 @@ coreschema==0.0.4
 cryptography==2.6.1
 cycler==0.10.0
 cymem==2.0.3
-Django==2.2.6
+Django==2.2.20
 django-admin-multiple-choice-list-filter==0.1.1
 django-celery-results==1.1.1
 django-jet==1.0.8
